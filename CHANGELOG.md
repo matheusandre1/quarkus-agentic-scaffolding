@@ -3,6 +3,25 @@
 All notable changes to this artifact are documented here. This project adheres to semantic
 versioning.
 
+## v0.13.3 — 2026-08-10
+- **Hardened the two credible findings from the skills.sh security audits.** Both Gen Agent Trust
+  Hub and Snyk rated `setup-agentic-scaffolding` HIGH, on two counts worth acting on:
+  - *Piped installer.* Phase A led with `curl -Ls https://sh.jbang.dev | bash` as a way to install
+    JBang. Package managers (SDKMAN, Homebrew, Chocolatey/Scoop) are now the documented path, and a
+    new Phase A rule forbids piping a downloaded script into a shell on the agent's own initiative —
+    the one-liner is a last resort, named as the trade-off it is, and only after the user approves
+    that specific command.
+  - *Credential handling.* Phase B told the agent to append `--api-key <KEY>` for context7, which
+    puts a secret into a command and a config file verbatim. The stdio server already falls back to
+    the `CONTEXT7_API_KEY` environment variable when the flag is absent, so the skill now registers
+    context7 with no key argument at all and tells the user to export the key. Added a blanket
+    "never handle a secret in plaintext" rule covering chat, config writes, and verification output.
+    `README.md`'s three manual-fallback snippets were updated to match.
+
+  The other two findings (prompt-injection surface from writing the conventions file;
+  command-execution from `java -version` / `docker version` probes) describe what the skill is for
+  and were left alone.
+
 ## v0.13.2 — 2026-08-10
 - **Fixed the dead Quarkus LTS link.** The scheduled link check caught a 404 on
   `https://quarkus.io/blog/quarkus-lts-releases/`, referenced by the `scaffold-project` skill

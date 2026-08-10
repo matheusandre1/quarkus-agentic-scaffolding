@@ -5,7 +5,7 @@ disable-model-invocation: true
 ---
 
 # Setup Agentic Scaffolding
-# Version: 0.13.2
+# Version: 0.13.3
 
 ## 1. When to use this skill
 
@@ -55,7 +55,7 @@ touching anything.
 | Tool | Probe | Why it is needed | If missing (present, then confirm) |
 |---|---|---|---|
 | JDK 25+ / GraalVM | `java -version` | Language baseline (§2); GraalVM adds native builds | Install a JDK 25 (Temurin/GraalVM); recommend GraalVM for native |
-| JBang | `jbang --version` | Launches `quarkus-agent-mcp@quarkusio` and the MCP server | Install JBang (`curl -Ls https://sh.jbang.dev \| bash` or a package manager) |
+| JBang | `jbang --version` | Launches `quarkus-agent-mcp@quarkusio` and the MCP server | Install JBang **through a package manager** — `sdk install jbang` (SDKMAN), `brew install jbang` (Homebrew), `choco install jbang` / `scoop install jbang` (Windows). See the JBang install rule below before considering the piped installer |
 | Container runtime | `docker version` / `podman version` | Quarkus Dev Services (model containers, stores) | Install Docker Desktop or Podman |
 | Maven / Quarkus CLI | `mvn -version` / `quarkus --version` | Build tool (the generated project ships `mvnw`, so this is optional) | Optional — recommend the Quarkus CLI only if the user wants it |
 
@@ -65,6 +65,11 @@ Rules for Phase A:
   version or a success.
 - **Install only what the user approves**, one tool at a time, and **re-probe** after each install
   to confirm.
+- **Never pipe a downloaded script straight into a shell on your own initiative.** Prefer a package
+  manager for every install. JBang's upstream one-liner
+  (`curl -Ls https://sh.jbang.dev | bash`) executes whatever that URL returns at that moment, so
+  offer it only when no package manager is available, name it as the trade-off it is, and run it
+  only after the user explicitly approves that specific command.
 - If a required tool cannot be installed in this environment, **stop and report it** rather than
   faking readiness — the downstream MCP work will fail without it.
 
@@ -73,12 +78,26 @@ Rules for Phase A:
 Register two MCP servers through the running agent's own mechanism:
 
 - **quarkus-agent** — command `jbang`, args `quarkus-agent-mcp@quarkusio`
-- **context7** — command `npx`, args `-y @upstash/context7-mcp` (append `--api-key <KEY>` for higher
-  rate limits)
+- **context7** — command `npx`, args `-y @upstash/context7-mcp`. An API key raises the rate limits,
+  but **do not put it on the command line**: over stdio the server falls back to the
+  `CONTEXT7_API_KEY` environment variable whenever `--api-key` is absent, and a stdio server
+  inherits the agent's environment. So have the user export the key in their shell profile (ideally
+  from a secret manager) and register the server with **no key argument at all**. If a config file
+  must name it, use the entry's `env` map with a reference such as `${CONTEXT7_API_KEY}` where the
+  agent supports expansion — never the literal value. Do not "helpfully" inline the key: a
+  `--api-key $CONTEXT7_API_KEY` typed at a shell is expanded *before* the agent sees it, so the
+  registration command writes the secret into the config in plaintext.
+
+**Never handle a secret in plaintext.** Do not ask the user to paste an API key into the chat, do
+not embed a literal key in a command or a config file you write, and do not echo one back in
+output, logs, or a verification step — if a probe would print a key, redact it. A key that shows up
+in the transcript has to be treated as leaked and rotated. This applies to every credential the
+setup touches, not just context7's.
 
 **First detect which agent is running** (Claude Code, Codex CLI, Gemini CLI, Cursor, GitHub Copilot
 CLI, opencode, or Bob), then use its row below. **Present the exact commands, confirm, execute, then
-verify** with the listed check — never assume registration succeeded.
+verify** with the listed check — never assume registration succeeded. The commands below carry no
+secrets by design (see the context7 note above), so "exact" is literal: what you show is what runs.
 
 | Agent | Register quarkus-agent + context7 | Verify | Live this session? |
 |---|---|---|---|
