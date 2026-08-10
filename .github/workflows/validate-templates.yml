@@ -43,6 +43,13 @@ jobs:
         with:
           title: Template build failed on scheduled run
           token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Close the tracking issue once the run recovers
+        if: success() && github.event_name == 'schedule'
+        uses: ./.github/actions/track-failure
+        with:
+          title: Template build failed on scheduled run
+          mode: resolve
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   links:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -66,4 +73,11 @@ jobs:
         uses: ./.github/actions/track-failure
         with:
           title: Link check failed on scheduled run
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Close the tracking issue once the run recovers
+        if: success() && github.event_name == 'schedule'
+        uses: ./.github/actions/track-failure
+        with:
+          title: Link check failed on scheduled run
+          mode: resolve
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,28 +1,36 @@
 name: Track failure in an issue
 description: >-
-  Open a tracking issue for a failing scheduled run, or comment on the existing
-  open one. Replaces jayqi/failed-build-issue-action, which still targets Node 20.
+  Track a failing scheduled run in an issue (open one, or comment on the open
+  one), and close that issue once the run recovers. Replaces
+  jayqi/failed-build-issue-action, which still targets Node 20.
 
 inputs:
   title:
     description: Title of the tracking issue. Matched exactly when looking for an open one.
     required: true
+  mode:
+    description: >-
+      'track' to open or comment on the issue after a failure; 'resolve' to close
+      it after a success. Callers gate these with `if: failure()` / `if: success()`.
+    required: false
+    default: track
   label:
     description: Label applied to tracking issues. Created if missing.
     required: false
     default: build failed
   token:
-    description: Token used to read, create, and comment on issues. Needs issues:write.
+    description: Token used to read, create, comment on, and close issues. Needs issues:write.
     required: true
 
 runs:
   using: composite
   steps:
-    - name: Open or update the tracking issue
+    - name: Track or resolve the issue
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token }}
         TITLE: ${{ inputs.title }}
+        MODE: ${{ inputs.mode }}
         LABEL: ${{ inputs.label }}
         REPO: ${{ github.repository }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -36,9 +44,27 @@ runs:
       run: |
         set -euo pipefail
 
-        # `gh issue create --label` fails on a label that does not exist yet.
-        gh label create "$LABEL" --repo "$REPO" --color B60205 \
-          --description 'A scheduled build or check is failing' >/dev/null 2>&1 || true
+        case "$MODE" in
+          track|resolve) ;;
+          *) echo "Unknown mode '$MODE' (expected 'track' or 'resolve')" >&2; exit 1 ;;
+        esac
+
+        # An open issue with this exact title is the one tracking this check.
+        # Matching on the title, not just the label, keeps each check's issue separate.
+        existing=$(gh issue list --repo "$REPO" --state open --label "$LABEL" --limit 100 \
+          --json number,title \
+          --jq '[.[] | select(.title == env.TITLE) | .number] | first // empty')
+
+        if [ "$MODE" = resolve ]; then
+          if [ -z "$existing" ]; then
+            echo 'No open tracking issue with that title; nothing to close'
+            exit 0
+          fi
+          echo "Run recovered; closing issue #$existing"
+          gh issue close "$existing" --repo "$REPO" --reason completed --comment \
+            "Recovered: [$WORKFLOW #$RUN_NUMBER]($RUN_URL) passed on [\`${SHA:0:7}\`]($COMMIT_URL). Closing automatically."
+          exit 0
+        fi
 
         body=$(printf '%s\n\n%s\n%s\n%s\n' \
           "GitHub Actions workflow [$WORKFLOW #$RUN_NUMBER]($RUN_URL) failed." \
@@ -46,14 +72,13 @@ runs:
           "Branch: [$REF_NAME]($TREE_URL)" \
           "Commit: [\`${SHA:0:7}\`]($COMMIT_URL)")
 
-        existing=$(gh issue list --repo "$REPO" --state open --label "$LABEL" --limit 100 \
-          --json number,title \
-          --jq '[.[] | select(.title == env.TITLE) | .number] | first // empty')
-
         if [ -n "$existing" ]; then
           echo "Commenting on existing issue #$existing"
           gh issue comment "$existing" --repo "$REPO" --body "$body"
         else
           echo 'No open tracking issue with that title; creating one'
+          # `gh issue create --label` fails on a label that does not exist yet.
+          gh label create "$LABEL" --repo "$REPO" --color B60205 \
+            --description 'A scheduled build or check is failing' >/dev/null 2>&1 || true
           gh issue create --repo "$REPO" --title "$TITLE" --label "$LABEL" --body "$body"
         fi
