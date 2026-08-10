@@ -2,9 +2,9 @@ name: validate-templates
 on:
   push:
     branches: [main]
-    paths: ['skills/**', 'ci/**', '.github/workflows/validate-templates.yml']
+    paths: ['skills/**', 'ci/**', '.github/actions/**', '.github/workflows/validate-templates.yml']
   pull_request:
-    paths: ['skills/**', 'ci/**', '.github/workflows/validate-templates.yml']
+    paths: ['skills/**', 'ci/**', '.github/actions/**', '.github/workflows/validate-templates.yml']
   schedule:
     - cron: '0 5 * * 1'   # weekly, Monday 05:00 UTC: validate against LIVE latest platform
   workflow_dispatch:
@@ -37,11 +37,12 @@ jobs:
           else
             ci/build-from-templates.sh "$QUARKUS_PLATFORM_VERSION"
           fi
-      - name: Toggle tracking issue on scheduled failure
+      - name: Track failure in an issue
         if: failure() && github.event_name == 'schedule'
-        uses: jayqi/failed-build-issue-action@v1
+        uses: ./.github/actions/track-failure
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          title: Template build failed on scheduled run
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   links:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -60,9 +61,9 @@ jobs:
             skills/scaffold-project/SKILL.md
             skills/audit-project/SKILL.md
           fail: true
-      - name: Toggle tracking issue on scheduled failure
+      - name: Track failure in an issue
         if: failure() && github.event_name == 'schedule'
-        uses: jayqi/failed-build-issue-action@v1
+        uses: ./.github/actions/track-failure
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          title-template: 'Link check failed on scheduled run'
+          title: Link check failed on scheduled run
+          token: ${{ secrets.GITHUB_TOKEN }}
