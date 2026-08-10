@@ -235,9 +235,197 @@ agent profile. If you also work in other stacks (other languages, frameworks, or
 projects), these Quarkus/LangChain4j-specific rules will bleed into unrelated work. For anyone who
 mixes stacks, the per-project drop-in is recommended over the global install.
 
-**Precedence and reverting.** A project-root convention file is read *in addition to* a global
-one, and project guidance can override broader global rules. To undo a global install, delete the
-global file (or remove just the Quarkus/LangChain4j section you pasted into it).
+**Precedence.** A project-root convention file is read *in addition to* a global one, and project
+guidance can override broader global rules. To undo a global install, see
+[Uninstall](#uninstall) — the same managed-block procedure applies to `~/.claude/CLAUDE.md`,
+`~/.codex/AGENTS.md`, and `~/.bob/rules/<your-file>.md`.
+
+## Uninstall
+
+Removes **this artifact only**. Everything it helped you set up is shared with the rest of your
+work and stays: **JDK 25 / GraalVM**, **JBang**, your container runtime, the **Quarkus Agents MCP**
+and **context7** MCP servers, `superpowers`, and every project `/scaffold-project` generated. No
+step below touches them — that is deliberate. If you also want the two MCP servers gone, remove
+them with your agent's own MCP commands; nothing here does it for you.
+
+| Removed | Where it lives |
+|---|---|
+| The three skills, per agent | `.claude/skills/`, `.agents/skills/`, `.bob/skills/`, … project and global |
+| Plugin + marketplace (Claude) | `quarkus-agentic-scaffolding@eldermoraes` |
+| Plugin + marketplace (Codex) | `quarkus-agentic-scaffolding@eldermoraes` |
+| Extension (Gemini CLI) | `quarkus-agentic-scaffolding` |
+| The managed conventions block | `CLAUDE.md` / `AGENTS.md` in your project root |
+| The global conventions, if you did the [Advanced](#advanced--personal-use-optional-global-install) install | `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.bob/rules/<your-file>.md` |
+
+Three files `/setup-agentic-scaffolding` may have written are **kept**: `.cursor/mcp.json`,
+`opencode.json`, and `.bob/mcp.json`. Their entire content is the two MCP servers this boundary
+protects, so deleting them would remove exactly what you asked to keep.
+
+### 1. The skills
+
+Use the path you installed with — or all of them, if you are not sure. Every command here is
+safe to run when nothing is installed.
+
+**Skills CLI** (the [Quick install](#quick-install--any-skills-capable-agent)) — name the three
+skills:
+
+```
+npx skills remove setup-agentic-scaffolding scaffold-project audit-project -y
+npx skills remove -g setup-agentic-scaffolding scaffold-project audit-project -y
+npx skills list
+npx skills list -g
+```
+
+The first line covers the current project, the second your global install. Removal deletes real
+files, not just symlinks. Omitting `-a/--agents` is intentional: the CLI then cleans the skills out
+of *every* agent it knows about, including ghost symlinks left by an agent it no longer detects.
+
+> **Do not use `--all` here.** It removes **every** skill from your agents, including skills that
+> have nothing to do with this repository — and, contrary to its own `--help`, it does not imply
+> `-y`. Name the three skills.
+
+**Claude Code** — uninstall the plugin, then drop the marketplace:
+
+```
+/plugin uninstall quarkus-agentic-scaffolding@eldermoraes
+/plugin marketplace remove eldermoraes
+/reload-plugins
+```
+
+> Removing a marketplace in Claude Code **uninstalls every plugin installed from it** and deletes
+> its cached clone. That is harmless here — this marketplace ships one plugin — but if you added
+> other plugins from `eldermoraes`, they go with it.
+
+Verify with `claude plugin list`. Your MCP servers live in `~/.claude.json` under `mcpServers`,
+which is untouched by any of this.
+
+**Codex** — remove the plugin **first**, then the marketplace:
+
+```
+codex plugin remove quarkus-agentic-scaffolding@eldermoraes
+codex plugin marketplace remove eldermoraes
+codex plugin list
+```
+
+> Codex behaves the opposite way from Claude: removing the marketplace does **not** uninstall
+> anything. It drops `[marketplaces.eldermoraes]` from `~/.codex/config.toml` and deletes the
+> Codex-managed marketplace directory, which leaves any other plugin from that marketplace
+> **orphaned** — its cache and config survive, its source does not. Remove the plugins first.
+
+`codex plugin remove` has no `rm` or `uninstall` alias, and marketplace removal is CLI-only (there
+is no `/plugins` equivalent). Your MCP servers stay in `[mcp_servers.*]` in `config.toml`.
+
+**Bob** — Bob has no command for this: a skill is a directory it scans for, so removing the
+directory is the whole uninstall.
+
+```
+./scripts/uninstall-bob-skill.sh                   # from <cwd>/.bob/skills/
+./scripts/uninstall-bob-skill.sh /path/to/project  # from that project's .bob/skills/
+./scripts/uninstall-bob-skill.sh --global          # from ~/.bob/skills/
+```
+
+It removes only the three skills it installed, and only after checking each `SKILL.md`'s
+front-matter `name` — a skill of your own that happens to sit in a directory called
+`audit-project` is skipped with a warning rather than deleted. A symlinked skill is unlinked, not
+recursed into. `.bob/mcp.json`, `.bob/rules/`, and every other skill in `.bob/skills/` are left
+alone. Re-running it is a clean no-op. Skills load once per conversation, so **start a new
+conversation** in Bob afterwards.
+
+**Gemini CLI** — if you installed the extension, uninstalling it takes the two MCP servers it
+declares with it, so add them back at user scope:
+
+```
+gemini extensions uninstall quarkus-agentic-scaffolding
+gemini mcp add -s user quarkus-agent jbang io.quarkus:quarkus-agent-mcp:1.2.5:runner
+gemini mcp add -s user context7 npx -y @upstash/context7-mcp@4.0.0
+gemini extensions list
+gemini mcp list
+```
+
+Order matters — uninstall first, then re-add. A `settings.json` registration takes precedence over
+an extension-declared server of the same name, so re-adding *before* uninstalling would silently
+shadow the extension's pinned versions. `gemini mcp add` defaults to `--scope project`, hence
+`-s user`. In `gemini mcp list`, an entry labelled `(from quarkus-agentic-scaffolding)` is still
+coming from the extension; after a successful uninstall and re-add, both servers appear without
+that label. Restart the session.
+
+### 2. The conventions file
+
+The file in your project root is **yours**. `/setup-agentic-scaffolding` only owns the region
+between its two markers:
+
+```text
+<!-- BEGIN quarkus-agentic-scaffolding conventions … -->
+…
+<!-- END quarkus-agentic-scaffolding conventions -->
+```
+
+Removing that region is the uninstall. Deleting the file is optional, and only safe when nothing
+else is in it. Run these from your project root, on `CLAUDE.md` (Claude) or `AGENTS.md` (Codex,
+Bob, Gemini, Cursor, opencode). For the [Advanced](#advanced--personal-use-optional-global-install)
+install, substitute the global path — `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, or
+`~/.bob/rules/<your-file>.md`.
+
+```bash
+# 1. Back up, without clobbering an existing .bak
+cp CLAUDE.md "CLAUDE.md.backup-$(date +%Y%m%d-%H%M%S)"
+
+# 2. Precheck — proceed ONLY on OK-SAFE-TO-REMOVE
+awk '/^<!-- BEGIN quarkus-agentic-scaffolding conventions/{b++;bl=NR}
+     /^<!-- END quarkus-agentic-scaffolding conventions/{e++;el=NR}
+     END{printf "BEGIN=%d END=%d beginLine=%d endLine=%d -> %s\n", b,e,bl,el,
+         (b==1 && e==1 && bl<el) ? "OK-SAFE-TO-REMOVE" : "REFUSE - remove the block by hand"}' CLAUDE.md
+
+# 3. Remove — changes nothing unless a complete, in-order pair exists
+perl -i -0777 -pe 's/^<!-- BEGIN quarkus-agentic-scaffolding conventions.*?^<!-- END quarkus-agentic-scaffolding conventions -->[ \t]*\r?\n?//msg' CLAUDE.md
+
+# 4. Inspect, then drop the file only if nothing but whitespace is left
+diff "$(ls -t CLAUDE.md.backup-* | head -1)" CLAUDE.md
+grep -q '[^[:space:]]' CLAUDE.md || rm CLAUDE.md
+
+# 5. Restore, if the diff shows anything you wrote
+cp "$(ls -t CLAUDE.md.backup-* | head -1)" CLAUDE.md
+```
+
+**Read the diff before you trust it.** A large deletion is the expected result, so its size tells
+you nothing about whether it went right. What you are checking for is *your own writing* in the
+deleted lines. If you see any, restore from the backup (step 5) and remove the block by hand.
+
+**Keep the backup** until you have restarted your agent and confirmed it still behaves. There is
+deliberately no `rm` step for it.
+
+**On `REFUSE`, do not run step 3** — edit the file by hand instead. `REFUSE` means the markers are
+missing, duplicated, out of order, or on the same line, and no automated edit can tell a real block
+from a passage where you wrote *about* the markers. Step 3 is built to change nothing in that case,
+but the point of the precheck is that you never find out the hard way.
+
+Two more things worth knowing:
+
+- **If `CLAUDE.md` is a symlink,** in-place editing replaces it with a regular file and breaks the
+  link. Edit the target instead.
+- **`CLAUDE.md` is often not in git.** Do not count on `git checkout` to undo this — that is what
+  the backup in step 1 is for.
+
+Step 4 uses `grep -q '[^[:space:]]'` rather than a size test on purpose: a file containing only the
+block reduces to exactly 0 bytes, but a block with a blank line on each side leaves a 2-byte
+whitespace-only file. Interior blank lines double up after removal; that is cosmetic, and yours to
+tidy.
+
+### 3. Verify
+
+```bash
+npx skills list          # and: npx skills list -g
+claude plugin list
+codex plugin list
+gemini extensions list
+gemini mcp list
+grep -rIn 'quarkus-agentic-scaffolding' . --exclude-dir=.git
+```
+
+None of the first five should mention `quarkus-agentic-scaffolding`, and `gemini mcp list` should
+show `quarkus-agent` and `context7` **without** a `(from …)` label. The `grep` should return
+nothing but your own backups. Restart your agent — most of them read skills, plugins, and
+instruction files once at startup.
 
 ## What's inside
 
