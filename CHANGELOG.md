@@ -3,6 +3,14 @@
 All notable changes to this artifact are documented here. This project adheres to semantic
 versioning.
 
+## v0.13.2 — 2026-08-10
+- **Fixed the dead Quarkus LTS link.** The scheduled link check caught a 404 on
+  `https://quarkus.io/blog/quarkus-lts-releases/`, referenced by the `scaffold-project` skill
+  where it tells the agent to pick the current LTS instead of hardcoding a version. Replaced with
+  [`https://quarkus.io/releases/`](https://quarkus.io/releases/), which lists the active LTS lines
+  and their support windows — a better fit for the "don't hardcode a number that will rot"
+  instruction than the 2023 policy announcement post.
+
 ## v0.13.1 — 2026-07-21
 - **README fixes.** The skills.sh badge image now uses the `www.skills.sh` host directly (the
   apex-domain URL 308-redirects, which GitHub's image proxy does not follow, breaking the image)

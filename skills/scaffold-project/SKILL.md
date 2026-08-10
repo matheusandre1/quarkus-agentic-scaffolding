@@ -4,7 +4,7 @@ description: Scaffold Quarkus + LangChain4j projects end-to-end and add agentic 
 ---
 
 # Quarkus + LangChain4j Scaffolding
-# Version: 0.13.1
+# Version: 0.13.2
 
 **Prerequisites.** The Quarkus Agents MCP, context7, and the project conventions file
 (`CLAUDE.md` for Claude, `AGENTS.md` for Codex) should already be configured — if they are
@@ -87,7 +87,7 @@ these recommended defaults to the user and confirm before generating:
 
 **Choose the Quarkus version up front.** There is no `streams` parameter. Decide LTS vs. latest
 with the user before generating: pass `quarkusVersion` explicitly to pin a release — pick the
-current LTS from the [Quarkus release/support policy](https://quarkus.io/blog/quarkus-lts-releases/)
+current LTS from the [Quarkus releases page](https://quarkus.io/releases/)
 rather than hardcoding a number that will rot — or omit `quarkusVersion` to take the latest
 platform release.
 
