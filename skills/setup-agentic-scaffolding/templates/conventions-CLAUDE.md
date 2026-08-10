@@ -1,5 +1,7 @@
+<!-- BEGIN quarkus-agentic-scaffolding conventions (managed block; do not edit inside. Re-run /setup-agentic-scaffolding to update.) -->
+
 # Quarkus + LangChain4j + AI Stack — Project Conventions
-# Version: 0.15.0
+# Version: 0.16.0
 
 These conventions apply whenever code is written, reviewed, or configured in a Quarkus +
 LangChain4j project. They are always-on. Procedural scaffolding steps and starter code live in
@@ -191,3 +193,5 @@ These conventions apply to projects in this Quarkus + LangChain4j stack. A per-p
 or override is allowed when justified — for example, pinning a fixed older Java version, choosing
 platform threads for a pinning dependency, or selecting a different model provider — and must be
 documented inline near the override so the deviation and its reason stay visible.
+
+<!-- END quarkus-agentic-scaffolding conventions -->

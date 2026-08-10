@@ -1,5 +1,5 @@
 # Quarkus + LangChain4j + AI Stack
-# Version: 0.15.0
+# Version: 0.16.0
 
 ## What this repository is
 
@@ -70,7 +70,7 @@ setup skill is what puts them in place.
 
 *Manual fallback,* if you would rather wire it by hand: install the Quarkus Agents MCP with
 `/plugin marketplace add quarkusio/quarkus-agent-mcp` then `/plugin install quarkus-agent@quarkus-tools`;
-add context7 with `claude mcp add context7 -- npx -y @upstash/context7-mcp` (for higher rate limits
+add context7 with `claude mcp add context7 -- npx -y @upstash/context7-mcp@4.0.0` (for higher rate limits
 `export CONTEXT7_API_KEY=…` in your shell — the server picks it up from the environment, so no key
 belongs on the command line); optionally install superpowers with
 `/plugin marketplace add obra/superpowers-marketplace` then
@@ -101,8 +101,8 @@ works for Codex too.)
 registers the **Quarkus Agents MCP** and **context7** MCP servers for Codex, and drops `AGENTS.md`
 into your project root. `AGENTS.md` §1 makes those two MCP servers non-negotiable for this stack.
 
-*Manual fallback:* add the Quarkus Agents MCP with `codex mcp add quarkus-agent -- jbang quarkus-agent-mcp@quarkusio`;
-add context7 with `codex mcp add context7 -- npx -y @upstash/context7-mcp` (for higher rate limits
+*Manual fallback:* add the Quarkus Agents MCP with `codex mcp add quarkus-agent -- jbang io.quarkus:quarkus-agent-mcp:1.2.5:runner`;
+add context7 with `codex mcp add context7 -- npx -y @upstash/context7-mcp@4.0.0` (for higher rate limits
 `export CONTEXT7_API_KEY=…` in your shell — the server picks it up from the environment, so no key
 belongs on the command line); install/enable the Superpowers plugin if you use it; and copy
 [`AGENTS.md`](AGENTS.md) into your project root (Codex reads project instructions from the project
@@ -130,8 +130,8 @@ file serves Bob — there is no separate `BOB.md`.
 ```json
 {
   "mcpServers": {
-    "quarkus-agent": { "command": "jbang", "args": ["quarkus-agent-mcp@quarkusio"] },
-    "context7":      { "command": "npx",   "args": ["-y", "@upstash/context7-mcp"] }
+    "quarkus-agent": { "command": "jbang", "args": ["io.quarkus:quarkus-agent-mcp:1.2.5:runner"] },
+    "context7":      { "command": "npx",   "args": ["-y", "@upstash/context7-mcp@4.0.0"] }
   }
 }
 ```

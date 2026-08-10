@@ -3,6 +3,51 @@
 All notable changes to this artifact are documented here. This project adheres to semantic
 versioning.
 
+## v0.16.0 — 2026-08-10
+- **Resolved the remaining skills.sh audit findings with engineering, not scan-appeasement.** The
+  Gen Agent Trust Hub report on `setup-agentic-scaffolding` (HIGH, four findings) and the Snyk
+  report on `scaffold-project` (MEDIUM, W011) are both addressed at the root; no functionality
+  removed.
+  - *Pipe-to-shell eliminated* (Trust Hub #1, CRITICAL). The literal
+    `curl -Ls https://sh.jbang.dev | bash` no longer appears anywhere: the JBang last resort is now
+    a three-step download → inspect → approve → execute flow (`curl -LsS -o jbang-install.sh …`,
+    show the file, run it only after explicit approval, delete it). The bytes the user approves are
+    the bytes on disk and the bytes that run — a piped stream offers nothing stable to approve.
+    Package managers remain the recommended path.
+  - *External dependencies pinned* (Trust Hub #2). `@upstash/context7-mcp@4.0.0` (npm `latest`) and
+    `io.quarkus:quarkus-agent-mcp:1.2.5:runner` — the explicit GAV the floating `quarkusio` catalog
+    alias resolves to (`script-ref: …:RELEASE:runner`), validated runnable via `jbang info tools`.
+    Pinned across the setup skill, `README.md`, and `gemini-extension.json`; two Renovate
+    `customManagers` (npm + maven regex over all three files) keep the pins current, so upgrades
+    become explicit reviewable PRs instead of whatever-is-newest-at-startup.
+  - *Managed-block boundary on generated conventions* (Trust Hub #3). `CLAUDE.md`/`AGENTS.md` (and
+    their byte-for-byte seed templates) are wrapped in stable, version-free
+    `<!-- BEGIN/END quarkus-agentic-scaffolding conventions -->` markers. Phase C is rewritten
+    around them: markers present → deterministic replace of the block only, every byte outside
+    untouched; markers absent → the existing draft-merge, adding the markers so the next run is
+    deterministic. Generated instruction text is now explicitly delimited from user content —
+    the injection surface the auditor flagged — and the merge stopped being heuristic.
+  - *Probe output is data, never instruction* (Trust Hub #4). New §3 rule: directives found inside
+    command output are quoted back as findings, never executed.
+  - *Triage template hardened at the ingestion edge* (Snyk W011). `Agent.java.template` now
+    demonstrates the secure pattern it should have taught: the two entry sub-agents carry
+    `@InputGuardrails(PromptInjectionGuard.class)` (wired from `Guardrails.java.template`, FQN
+    `dev.langchain4j.service.guardrail.InputGuardrails` verified against upstream docs); prompts
+    delimit the ticket in `<ticket>` markers with a system-message instruction to treat it as data;
+    `TriageBridge` rejects blank/over-long input before any model call (4 000 chars, aligned with
+    the guardrail); and the failure path stops leaking internals — `emitter.fail(e)` and
+    `ProgressUpdate.error(t.getMessage())` are replaced by full server-side logging plus a generic
+    client-safe `ProgressUpdate.failed()`, mirroring the RFC 9457 philosophy at the REST edge.
+    `ci/build-from-templates.sh` compiles green against platform 3.38.1. One honest caveat: docs
+    confirm guardrails on `@RegisterAiService` interfaces, but not explicitly when such an
+    interface is invoked as an `@Agent` sub-agent; the sub-agents are ordinary CDI AI-service
+    proxies, so the guard should run, but that is inference — worth a runtime assertion in a
+    scaffolded project.
+  - *`SECURITY.md` added.* States the trust boundary the skills operate under (read-only probes,
+    approval before any mutation, no piped installers, pinned sources, no plaintext secrets,
+    managed blocks, secure-by-default templates) and routes vulnerability reports to private
+    GitHub security advisories.
+
 ## v0.15.0 — 2026-08-10
 - **Refreshed the model defaults** (EVOLUTION-PLAN item 4). Chat goes from `llama3.2` /
   `llama3.2:1b` to **`qwen3:4b`** and **`qwen3:1.7b`** (the `smaller` named model): qwen3 is what

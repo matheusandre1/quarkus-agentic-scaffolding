@@ -10,6 +10,34 @@
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\n[A-Z0-9_]+=(?<currentValue>[^\\s]+)"
       ]
+    },
+    {
+      "description": "Pinned context7 MCP version in registration commands and JSON snippets",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^skills/setup-agentic-scaffolding/SKILL\\.md$/",
+        "/^README\\.md$/",
+        "/^gemini-extension\\.json$/"
+      ],
+      "matchStrings": [
+        "@upstash/context7-mcp@(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?)"
+      ],
+      "depNameTemplate": "@upstash/context7-mcp",
+      "datasourceTemplate": "npm"
+    },
+    {
+      "description": "Pinned Quarkus Agents MCP GAV in registration commands and JSON snippets",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^skills/setup-agentic-scaffolding/SKILL\\.md$/",
+        "/^README\\.md$/",
+        "/^gemini-extension\\.json$/"
+      ],
+      "matchStrings": [
+        "io\\.quarkus:quarkus-agent-mcp:(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+(?:[-.][0-9A-Za-z.-]+)?):runner"
+      ],
+      "depNameTemplate": "io.quarkus:quarkus-agent-mcp",
+      "datasourceTemplate": "maven"
     }
   ]
 }

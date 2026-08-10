@@ -4,7 +4,7 @@ description: Scaffold Quarkus + LangChain4j projects end-to-end and add agentic 
 ---
 
 # Quarkus + LangChain4j Scaffolding
-# Version: 0.15.0
+# Version: 0.16.0
 
 **Prerequisites.** The Quarkus Agents MCP, context7, and the project conventions file
 (`CLAUDE.md` for Claude, `AGENTS.md` for Codex) should already be configured — if they are
@@ -186,6 +186,15 @@ Use `templates/Agent.java.template`. It shows the full declarative agentic shape
   and emits progress over a Mutiny `Multi`;
 - the `@WebSocket` endpoint that delegates to the bridge.
 
+The entry agents (the ones that see the raw ticket) are annotated with
+`@InputGuardrails(PromptInjectionGuard.class)` — the guard from the Guardrails template (§10).
+**Any workflow whose entry point ingests free text from outside MUST attach input guardrails and
+delimit that text in the prompt** (wrapped in markers, with the system message saying it is data
+and not instructions); guardrails are not optional on an exposed entry path. Downstream agents
+that only read model-produced state do not need them. Validate at the edge too — the bridge
+rejects blank or over-long tickets before the workflow starts — and never return exception text
+to the client: log the failure in full, emit a generic error, as the socket's `@OnError` does.
+
 Requires the `quarkus-langchain4j-agentic` extension. Call `quarkus_skills` for it before writing
 the workflow.
 
@@ -205,7 +214,8 @@ validate an AI service's inputs (`InputGuardrail`) and outputs (`OutputGuardrail
 with `@InputGuardrails(…)` / `@OutputGuardrails(…)` on the AI-service method or interface. Use the
 upstream `dev.langchain4j.guardrail` API — the Quarkus-specific guardrail API was removed. An
 output guardrail can force the model to answer again with `reprompt(…)`; cap attempts with
-`quarkus.langchain4j.guardrails.max-retries` (default 3, 0 disables).
+`quarkus.langchain4j.guardrails.max-retries` (default 3, 0 disables). The Agent template (§8)
+shows `PromptInjectionGuard` wired onto the agents that ingest untrusted text.
 
 ## 11. `application.properties` baseline
 
