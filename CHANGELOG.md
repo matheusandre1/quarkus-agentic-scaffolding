@@ -3,6 +3,35 @@
 All notable changes to this artifact are documented here. This project adheres to semantic
 versioning.
 
+## v0.14.0 — 2026-08-10
+- **Baseline moved to the Quarkus 3.38 line** (issue #11). `ci/baseline.env` goes to platform
+  `3.38.1`, `quarkus-langchain4j-bom` `1.12.2`, and JDK `25.0.4+7.0.LTS`. Nothing in 3.38 required
+  a corrective change: all six items in the 3.38 migration guide have zero surface in this
+  repository, and the weekly cron had already built the templates against 3.38.1 successfully
+  before the bump. The `QUARKUS_LANGCHAIN4J_BOM_VERSION` comment now spells out that the line is a
+  release watcher and not what a build resolves — it read `1.12.0` while platform 3.37.2 actually
+  shipped `1.11.2`.
+- **`@Skills` in the conventions and templates.** The 3.38 line carries quarkus-langchain4j
+  `1.12.x`, which introduces the `@Skills` annotation (`io.quarkiverse.langchain4j.skills`;
+  verified present in `quarkus-langchain4j-skills` 1.12.2 and absent in 1.11.2 — the artifact
+  itself already existed, only the annotation is new). A service annotated with `@Skills` gets an
+  `activate_skill` tool plus a system message advertising the available skills, so reusable
+  instructions live in `SKILL.md` files instead of an ever-growing `@SystemMessage`. Added to the
+  extension menu, to `AiService.java.template` and `application.properties.template` as commented
+  blocks, and as a §4 convention. The extension is `status:preview`, which the text says plainly;
+  it stays out of the CI extension list for that reason.
+- **`quarkus-http-problem` in the extension menu** (issue #10). Errors escaping a REST resource
+  become RFC 9457 `application/problem+json` instead of a raw 500 with a stack trace — relevant
+  here because a model timeout, a dead inference endpoint, or a throwing tool would otherwise leak
+  prompts and internal names. Added as optional-recommended, with a §3 convention and a commented
+  configuration block.
+
+  Correcting the issue's premise: the extension **is** in `io.quarkus.platform:quarkus-bom` from
+  3.38.0 (0 occurrences in the 3.37.2 BOM, 2 in 3.38.0 and 3.38.1 on Maven Central), so it needs
+  **no** explicit `<version>` and is *not* the exception to the "no version pins" convention that
+  the issue anticipated. The extension's own README still states the opposite; the BOM is
+  authoritative. Its current version is 3.38.1, not the 3.33.2 recorded when the issue was filed.
+
 ## v0.13.3 — 2026-08-10
 - **Hardened the two credible findings from the skills.sh security audits.** Both Gen Agent Trust
   Hub and Snyk rated `setup-agentic-scaffolding` HIGH, on two counts worth acting on:

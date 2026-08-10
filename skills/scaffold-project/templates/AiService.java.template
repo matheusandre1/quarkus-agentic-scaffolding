@@ -62,4 +62,26 @@ public interface ChatAssistant {
     //       return "The assistant is temporarily unavailable; please retry shortly.";
     //   }
     // -------------------------------------------------------------------------
+
+    // -------------------------------------------------------------------------
+    // Agent skills (opt-in): with the quarkus-langchain4j-skills extension, @Skills
+    // exposes SKILL.md-format skills to the model — the extension registers an
+    // activate_skill tool and a system message listing what is available, so the
+    // model pulls in a skill's instructions on demand. Each skill is a directory
+    // holding a SKILL.md whose YAML front matter carries its name and description
+    // (see quarkus.langchain4j.skills.directories in application.properties).
+    //
+    // NOTE: the extension is status:preview — its API may change between releases.
+    //
+    //   import io.quarkiverse.langchain4j.skills.Skills;
+    //
+    //   @RegisterAiService
+    //   @Skills                       // every discovered skill
+    //   public interface ChatAssistant { ... }
+    //
+    // Narrow it to named skills, on the interface or on a single method:
+    //
+    //   @Skills("incident-triage")
+    //   String answer(String problem);
+    // -------------------------------------------------------------------------
 }

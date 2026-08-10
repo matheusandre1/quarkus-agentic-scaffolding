@@ -21,6 +21,13 @@
     MCP server: + mcp-server-http      (expose this app as an MCP server; stdio variant: mcp-server-stdio)
     observability: + micrometer-registry-prometheus, opentelemetry   (optional; see application.properties.template)
     fault tolerance: + smallrye-fault-tolerance                      (optional; MicroProfile FT on AI-service methods)
+    error contract: + http-problem     (optional; io.quarkiverse.httpproblem; RFC 9457 problem+json at the REST edge)
+    agent skills:   + langchain4j-skills   (optional; loads SKILL.md-format skills at runtime; status:preview)
+
+  All of the above are platform extensions: quarkus_create resolves them and the BOMs manage
+  their versions, so none of them belongs in the <dependencies> below and none takes a <version>.
+  (http-problem joined io.quarkus.platform:quarkus-bom in 3.38.0 — the extension's own README
+  still says otherwise, but the BOM on Maven Central is authoritative.)
 
   quarkus-arc, quarkus-junit and rest-assured are pulled in automatically — do not list them.
 

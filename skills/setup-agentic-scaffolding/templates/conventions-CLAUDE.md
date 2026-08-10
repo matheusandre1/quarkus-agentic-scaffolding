@@ -1,5 +1,5 @@
 # Quarkus + LangChain4j + AI Stack — Project Conventions
-# Version: 0.13.3
+# Version: 0.14.0
 
 These conventions apply whenever code is written, reviewed, or configured in a Quarkus +
 LangChain4j project. They are always-on. Procedural scaffolding steps and starter code live in
@@ -74,6 +74,17 @@ generic web search.
 - **REST and API surface.** Use `quarkus-rest` (Quarkus REST) with `quarkus-rest-jackson` for JSON
   (Jackson is the Quarkus default serializer), and expose `quarkus-smallrye-openapi` so endpoints
   are documented and explorable.
+- **Errors leave the REST edge as RFC 9457 problem details.** Add `quarkus-http-problem`
+  (`io.quarkiverse.httpproblem`) and every exception escaping a resource becomes an
+  `application/problem+json` response instead of a raw 500 with a stack trace — which matters
+  here because an unhandled model timeout, a dead inference endpoint, or a throwing tool would
+  otherwise leak prompts and internal names to the caller; the server still logs the failure in
+  full. It needs no configuration: the `quarkus.http-problem.*` keys only tune it, and
+  `include-details` stays `false` so parser failures do not echo internal class names. This
+  covers the REST edge only — the WebSockets Next streaming path keeps its own `@OnError`
+  handling (§4) — and it complements rather than replaces the declarative fault tolerance in §4,
+  which handles failure *inside* the service. The extension is in the platform BOM from Quarkus
+  3.38.0, so it takes no version pin.
 - **Streaming uses WebSockets Next.** For token or progress streaming, use
   `quarkus-websockets-next` rather than rolling a custom transport (see §4 for the streaming
   pattern).
@@ -136,6 +147,16 @@ generic web search.
   fallback as a `default` method on the same interface — never hand-rolled try/retry loops
   around AI calls. Size `@Timeout` generously on tool-calling methods: a single invocation may
   span several model/tool round-trips before it returns.
+- **Reusable instructions ship as skills, not as prompt strings.** When behavior would otherwise
+  be pasted into an ever-growing `@SystemMessage`, put it in a `SKILL.md` (YAML front matter with
+  `name` and `description`, instructions in the body), point
+  `quarkus.langchain4j.skills.directories` at the folder, and annotate the service or method with
+  `@Skills` (`io.quarkiverse.langchain4j.skills`, extension `quarkus-langchain4j-skills`). The
+  extension registers an `activate_skill` tool and a system message advertising what is
+  available, so the model pulls in a skill's instructions only when they apply — the prompt stays
+  small and each skill stays independently editable. Narrow the surface with `@Skills("name")`
+  rather than exposing everything. The extension is `status:preview`: pin the behavior you depend
+  on with a test, and expect its API to move.
 - **RAG starts simple with Easy RAG.** For retrieval-augmented generation, start with the
   `quarkus-langchain4j-easy-rag` extension plus an in-process embedding model: point
   `quarkus.langchain4j.easy-rag.path` at a documents folder and let it ingest on startup. Move to

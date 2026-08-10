@@ -4,7 +4,7 @@ description: Scaffold Quarkus + LangChain4j projects end-to-end and add agentic 
 ---
 
 # Quarkus + LangChain4j Scaffolding
-# Version: 0.13.3
+# Version: 0.14.0
 
 **Prerequisites.** The Quarkus Agents MCP, context7, and the project conventions file
 (`CLAUDE.md` for Claude, `AGENTS.md` for Codex) should already be configured — if they are
@@ -104,6 +104,11 @@ recommended default and **wait for the user's choice** before generating:
   subprocess server)
 - observability (optional): add `micrometer-registry-prometheus` and `opentelemetry`
 - fault tolerance (optional): add `smallrye-fault-tolerance`
+- error contract (optional, recommended for any REST app): add `http-problem`
+  (`io.quarkiverse.httpproblem`; RFC 9457 `application/problem+json` at the REST edge, so an
+  escaping exception stops surfacing as a raw 500 with a stack trace)
+- agent skills (optional): add `langchain4j-skills` (`io.quarkiverse.langchain4j`; lets the app
+  load `SKILL.md`-format skills at runtime — `status:preview`, so treat its API as unstable)
 
 (`quarkus-arc` comes in automatically.) The generated `pom.xml` already imports the
 `quarkus-bom` and `quarkus-langchain4j-bom` platform BOMs, sets Java 25, enables the

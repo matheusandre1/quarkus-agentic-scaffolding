@@ -77,3 +77,25 @@ quarkus.langchain4j.devservices.enabled=false
 ## Dev-only: copy prompt/completion text onto spans (records user content):
 # quarkus.langchain4j.tracing.include-prompt=true
 # quarkus.langchain4j.tracing.include-completion=true
+
+# ============================================================================
+# Error contract (RFC 9457) — nothing to uncomment: the http-problem extension
+# works as soon as it is on the classpath, turning an exception that escapes a
+# resource into an application/problem+json response instead of a raw 500. The
+# keys below only tune it; include-details stays false so parser and binding
+# failures do not echo internal class names back to the caller.
+# ============================================================================
+## Return 422 instead of 400 for bean-validation failures:
+# quarkus.http-problem.constraint-violation.status=422
+## Copy MDC keys into the problem document (e.g. a correlation id):
+# quarkus.http-problem.include-mdc-properties=uuid
+## Dev-only: echo raw parser messages in "detail" (leaks internal class names):
+# quarkus.http-problem.include-details=true
+
+# ============================================================================
+# Agent skills — uncomment when the langchain4j-skills extension is present.
+# Each listed directory holds one subdirectory per skill, each with a SKILL.md
+# whose YAML front matter declares the skill's name and description. Pair with
+# @Skills on the AI service (see AiService.java.template). status:preview.
+# ============================================================================
+# quarkus.langchain4j.skills.directories=skills,classpath:other-skills
