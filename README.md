@@ -262,7 +262,8 @@ global file (or remove just the Quarkus/LangChain4j section you pasted into it).
 ├── plugins/
 │   └── quarkus-agentic-scaffolding/  # Codex marketplace wrapper; symlinks to .codex-plugin + skills
 ├── scripts/
-│   └── install-bob-skill.sh  # Fallback: copy the skills into a project's (or global) .bob/skills/
+│   ├── install-bob-skill.sh    # Fallback: copy the skills into a project's (or global) .bob/skills/
+│   └── uninstall-bob-skill.sh  # The mirror: remove them again (see Uninstall)
 ├── docs/
 │   └── VALIDATING-TEMPLATES.md   # How to verify the templates still build
 └── skills/

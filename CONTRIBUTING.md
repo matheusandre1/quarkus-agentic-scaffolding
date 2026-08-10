@@ -21,6 +21,9 @@ not from generic boilerplate. Contributions are expected to keep that bar.
   and `skills/`; do not put duplicate skill content here.
 - **`scripts/install-bob-skill.sh`** — installs the skill into a project's (or global) `.bob/skills/`
   for Bob (which has no plugin marketplace).
+- **`scripts/uninstall-bob-skill.sh`** — the mirror of the installer: removes the three skills
+  from a project's (or global) `.bob/skills/`, ownership-checked and safe to re-run. Behavior-tested
+  by `ci/test-uninstall-bob-skill.sh`.
 
 Keep the split clean: the skill says *how to lay things out*; `CLAUDE.md` and `AGENTS.md` say
 *what the code must do*. Do not restate conventions inside the skill — cross-reference the
