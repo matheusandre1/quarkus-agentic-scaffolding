@@ -334,7 +334,9 @@ ls .bob/skills/                                    # verify; and: ls ~/.bob/skil
 ```
 
 Nothing named `setup-agentic-scaffolding`, `scaffold-project`, or `audit-project` should be left in
-that listing — a directory Bob does not see is a skill Bob does not load.
+that listing — a directory Bob does not see is a skill Bob does not load. `ls` answering `No such
+file or directory` is a pass too: it means this project never had a local `.bob/skills/`, which is
+exactly what you should see if you only ever installed with `--global`.
 
 It removes only the three skills it installed, and only after reading each `SKILL.md`'s front-matter
 `name`: a directory that declares a different name — or declares none, or has no `SKILL.md` at all —
