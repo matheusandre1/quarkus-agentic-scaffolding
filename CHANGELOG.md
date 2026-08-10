@@ -36,17 +36,24 @@ versioning.
     server of the same name.
 - **`scripts/uninstall-bob-skill.sh`** — the mirror of `install-bob-skill.sh`, because Bob has no
   manifest, registry, or command for removing a skill; deleting the directory is the whole
-  uninstall. Ownership-checked (a skill of your own sitting in a directory called `audit-project` is
-  skipped, not deleted), symlink-safe (unlinks rather than recursing into the target), idempotent,
-  and scoped to the three skill directories — `.bob/mcp.json`, `.bob/rules/`, and your other skills
-  are never touched.
+  uninstall. Ownership-checked against each `SKILL.md`'s front-matter `name` — a directory that
+  declares a different name, declares none, or has no `SKILL.md` is skipped with a warning rather
+  than deleted; the residual, stated in the script's header and in the README, is that a skill of
+  your own that *also* declares `name: audit-project` is indistinguishable from ours and will be
+  removed, so move it aside first. Symlink-safe (unlinks rather than recursing into the target),
+  idempotent, and scoped to the three skill directories — `.bob/mcp.json`, `.bob/rules/`, and your
+  other skills are never touched.
 - **Two behavior tests, because a destructive script and a destructive one-liner do not validate by
   reading.** `ci/test-uninstall-bob-skill.sh` covers the install/uninstall round trip, idempotency,
   the ownership and symlink guards, and `--global` with `HOME` redirected into a temp directory.
-  `ci/test-conventions-block-removal.sh` runs the published commands over 13 fixtures — including
+  `ci/test-conventions-block-removal.sh` runs the published commands over 15 fixtures — including
   every input the old `sed` procedure destroyed — and asserts that each refusal leaves the file
   byte-for-byte identical, plus a drift guard that fails if `README.md` stops publishing the exact
-  validated commands. Both run in a new `behavior-tests` job in the quality workflow.
+  validated commands. Three of the fixtures pin the accepted residual instead: a marker quoted at
+  column 0 is column 0 to `awk` and `perl` alike, so a quoted pair — or a mixed real/quoted pair,
+  whose deletion spans everything between the two lines — reaches `OK-SAFE-TO-REMOVE`. The mandatory
+  backup and the "read the diff before you trust it" warning are the mitigation. Both tests run in a
+  new `behavior-tests` job in the quality workflow.
 - **Corrected five pre-existing claims** the validation surfaced (details and sources in the
   commit): `~/.bob/AGENTS.md` *is* Bob's documented global context file; Bob's marketplace exists
   but carries modes and MCP servers rather than skills; the global MCP path is documented

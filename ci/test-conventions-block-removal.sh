@@ -7,10 +7,13 @@
 # passed that precheck and still destroyed user-authored lines (see the spec, Finding 1).
 # Every one of those inputs is a fixture here.
 #
-# Two properties are asserted:
+# Three properties are asserted:
 #   1. The precheck says OK-SAFE-TO-REMOVE only for one complete, in-order marker pair.
 #   2. On every input the precheck REFUSES, running the removal anyway leaves the file
 #      byte-for-byte identical - so a user who ignores the precheck is still safe.
+#   3. Group D pins the accepted residual: a marker quoted at column 0 counts as real to
+#      both commands, so the precheck cannot tell a genuine pair from a quoted one. Those
+#      fixtures record shipped behavior, not bugs (see the spec, Finding 1, "Residual").
 #
 # Plus a drift guard: README.md must still publish these exact commands.
 set -euo pipefail
@@ -190,11 +193,17 @@ mk_block "$f"
 expect_verdict "$f" 'REFUSE' 'C1 two complete blocks'
 
 # ============================================================================
-# Group D - the documented residual. Both markers quoted at column 0 inside a fenced
-# code block, with no real block present, is indistinguishable from the real thing.
-# This fixture pins the known-imperfect behavior rather than pretending it is absent;
-# the damage is bounded to the quoted region instead of running to end of file, and the
-# published warning tells the user to read the diff before trusting it.
+# Group D - the accepted residual, pinned as documented behavior. See the spec
+# (2026-08-10-uninstall-design.md, Finding 1, "Residual"). Neither awk nor perl has any
+# notion of a fenced code block, so a marker quoted at column 0 is column 0 to both: the
+# precheck proves only that a column-0 marker pair exists IN ORDER, never that the pair
+# is genuine. D1 quotes both markers, and the deletion happens to stay inside the fence.
+# D2 and D3 are the sharp cases: a MIXED pair - one real marker, one quoted - deletes
+# everything between the two matched lines, so the damage is NOT bounded to the quoted
+# region. The mitigation is process, not pattern: the mandatory backup in step 1 and the
+# published "read the diff before you trust it" warning. These three fixtures are a
+# record of shipped behavior, not bug reports - do not "fix" the awk/perl commands to
+# make them fail, those commands are published as validated against primary sources.
 # ============================================================================
 f="$TMP/d1.md"
 {
@@ -211,8 +220,46 @@ assert_has "$f" 'KEEP-AFTER'  'D1: content after the fence survives'
 if grep -Fq 'quoted example' "$f"; then
   fail 'D1: unexpected - the quoted region survived; re-check the spec residual note'
 else
-  pass 'D1: the quoted region was removed (documented residual, damage bounded to it)'
+  pass 'D1: the quoted region was removed (documented residual)'
 fi
+
+# D2: MIXED pair - a real BEGIN whose END was deleted by hand, plus a column-0 END quoted
+# inside a fence much further down. The precheck sees one BEGIN and one END in order and
+# passes, and the removal takes every line between them, the user's own section included.
+# This is the accepted residual, asserted here so the behavior cannot change unnoticed.
+f="$TMP/d2.md"
+{
+  printf 'MY-HEADER\n\n'
+  printf '%s\n' "$BEGIN_MARKER"
+  printf '\nconventions body\n\n'
+  printf '## MY OWN SECTION\n\nMY-PRECIOUS-NOTES\n\n'
+  printf '```markdown\n'
+  printf '%s\n' "$END_MARKER"
+  printf '```\n\nMY-TAIL\n'
+} >"$f"
+expect_verdict "$f" 'OK-SAFE-TO-REMOVE' 'D2 mixed pair, real BEGIN + quoted END (ACCEPTED residual)'
+remove_block "$f"
+assert_has   "$f" 'MY-HEADER' 'D2: content above the real BEGIN survives'
+assert_has   "$f" 'MY-TAIL'   'D2: content below the quoted END survives'
+assert_lacks "$f" 'MY-PRECIOUS-NOTES' \
+  'D2: user content between the two markers IS deleted - accepted, and not bounded to the fence'
+
+# D3: the symmetric MIXED pair - a column-0 BEGIN quoted inside a fence, plus a real END
+# further down. Same verdict, same unbounded deletion.
+f="$TMP/d3.md"
+{
+  printf 'MY-HEADER\n\nHere is the opening marker:\n\n```markdown\n'
+  printf '%s\n' "$BEGIN_MARKER"
+  printf '```\n\n## MY OWN SECTION\n\nMY-PRECIOUS-NOTES\n\n'
+  printf '%s\n' "$END_MARKER"
+  printf '\nMY-TAIL\n'
+} >"$f"
+expect_verdict "$f" 'OK-SAFE-TO-REMOVE' 'D3 mixed pair, quoted BEGIN + real END (ACCEPTED residual)'
+remove_block "$f"
+assert_has   "$f" 'MY-HEADER' 'D3: content above the fence survives'
+assert_has   "$f" 'MY-TAIL'   'D3: content below the real END survives'
+assert_lacks "$f" 'MY-PRECIOUS-NOTES' \
+  'D3: user content between the two markers IS deleted - accepted, and not bounded to the fence'
 
 # ============================================================================
 # Drift guard - README.md must publish these exact commands.
@@ -242,7 +289,7 @@ else
 fi
 
 if [[ "$failures" == 0 ]]; then
-  echo 'OK: managed-block removal is safe on all 13 fixtures, and README matches'
+  echo 'OK: managed-block removal behaves as documented on all 15 fixtures, and README matches'
 else
   echo "FAIL: $failures assertion(s) failed" >&2
   exit 1

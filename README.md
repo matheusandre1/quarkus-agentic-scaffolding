@@ -330,14 +330,20 @@ directory is the whole uninstall.
 ./scripts/uninstall-bob-skill.sh                   # from <cwd>/.bob/skills/
 ./scripts/uninstall-bob-skill.sh /path/to/project  # from that project's .bob/skills/
 ./scripts/uninstall-bob-skill.sh --global          # from ~/.bob/skills/
+ls .bob/skills/                                    # verify; and: ls ~/.bob/skills/
 ```
 
-It removes only the three skills it installed, and only after checking each `SKILL.md`'s
-front-matter `name` — a skill of your own that happens to sit in a directory called
-`audit-project` is skipped with a warning rather than deleted. A symlinked skill is unlinked, not
-recursed into. `.bob/mcp.json`, `.bob/rules/`, and every other skill in `.bob/skills/` are left
-alone. Re-running it is a clean no-op. Skills load once per conversation, so **start a new
-conversation** in Bob afterwards.
+Nothing named `setup-agentic-scaffolding`, `scaffold-project`, or `audit-project` should be left in
+that listing — a directory Bob does not see is a skill Bob does not load.
+
+It removes only the three skills it installed, and only after reading each `SKILL.md`'s front-matter
+`name`: a directory that declares a different name — or declares none, or has no `SKILL.md` at all —
+is skipped with a warning rather than deleted. What the check cannot do is tell two identical
+declarations apart, so a skill of your own that *also* declares `name: audit-project` is
+indistinguishable from ours and **will** be removed. Move it aside before you run this. A symlinked
+skill is unlinked, not recursed into. `.bob/mcp.json`, `.bob/rules/`, and every other skill in
+`.bob/skills/` are left alone. Re-running it is a clean no-op. Skills load once per conversation, so
+**start a new conversation** in Bob afterwards.
 
 **Gemini CLI** — if you installed the extension, uninstalling it takes the two MCP servers it
 declares with it, so add them back at user scope:
@@ -374,6 +380,12 @@ Bob, Gemini, Cursor, opencode). For the [Advanced](#advanced--personal-use-optio
 install, substitute the global path — `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, or
 `~/.bob/AGENTS.md` (or `~/.bob/rules/<your-file>.md`, if you used a rules file instead).
 
+**Run these one fence at a time, and do not paste the section as a whole.** Each of the five steps
+below is conditional on what the step before it printed, so a single paste would run the removal
+without you having read the precheck, and then hand the original file straight back.
+
+Steps 1 and 2 are the safe pair — a copy and a report, neither of which changes `CLAUDE.md`:
+
 ```bash
 # 1. Back up, without clobbering an existing .bak
 cp CLAUDE.md "CLAUDE.md.backup-$(date +%Y%m%d-%H%M%S)"
@@ -383,21 +395,40 @@ awk '/^<!-- BEGIN quarkus-agentic-scaffolding conventions/{b++;bl=NR}
      /^<!-- END quarkus-agentic-scaffolding conventions/{e++;el=NR}
      END{printf "BEGIN=%d END=%d beginLine=%d endLine=%d -> %s\n", b,e,bl,el,
          (b==1 && e==1 && bl<el) ? "OK-SAFE-TO-REMOVE" : "REFUSE - remove the block by hand"}' CLAUDE.md
+```
 
+Read that line before going on. Run step 3 **only** if it printed `OK-SAFE-TO-REMOVE`; on `REFUSE`,
+stop here and edit the file by hand.
+
+```bash
 # 3. Remove — changes nothing unless a complete, in-order pair exists
 perl -i -0777 -pe 's/^<!-- BEGIN quarkus-agentic-scaffolding conventions.*?^<!-- END quarkus-agentic-scaffolding conventions -->[ \t]*\r?\n?//msg' CLAUDE.md
+```
 
+Now compare what is left against the backup:
+
+```bash
 # 4. Inspect, then drop the file only if nothing but whitespace is left
 diff "$(ls -t CLAUDE.md.backup-* | head -1)" CLAUDE.md
-grep -q '[^[:space:]]' CLAUDE.md || rm CLAUDE.md
+```
 
-# 5. Restore, if the diff shows anything you wrote
-cp "$(ls -t CLAUDE.md.backup-* | head -1)" CLAUDE.md
+Deleting the file itself is optional, and the line below does it only if no content is left. Run it
+**only** once the diff has shown you that nothing of yours was inside the deleted region and that
+nothing but whitespace remains:
+
+```bash
+grep -q '[^[:space:]]' CLAUDE.md || rm CLAUDE.md
 ```
 
 **Read the diff before you trust it.** A large deletion is the expected result, so its size tells
 you nothing about whether it went right. What you are checking for is *your own writing* in the
-deleted lines. If you see any, restore from the backup (step 5) and remove the block by hand.
+deleted lines. If you see any, step 5 is the recovery — it puts the original file back verbatim,
+managed block included, and you then remove the block by hand:
+
+```bash
+# 5. Restore, if the diff shows anything you wrote
+cp "$(ls -t CLAUDE.md.backup-* | head -1)" CLAUDE.md
+```
 
 **Keep the backup** until you have restarted your agent and confirmed it still behaves. There is
 deliberately no `rm` step for it.
@@ -405,7 +436,11 @@ deliberately no `rm` step for it.
 **On `REFUSE`, do not run step 3** — edit the file by hand instead. `REFUSE` means the markers are
 missing, duplicated, out of order, or on the same line, and no automated edit can tell a real block
 from a passage where you wrote *about* the markers. Step 3 is built to change nothing in that case,
-but the point of the precheck is that you never find out the hard way.
+but the point of the precheck is that you never find out the hard way. The reverse does not hold:
+`OK-SAFE-TO-REMOVE` says a marker pair exists *in order*, not that the pair is genuine — a marker
+quoted at column 0, say inside a fenced code block where you documented your own agent setup, counts
+as real to both commands, and step 3 then takes everything between it and its partner. That is why
+step 1's backup is not optional and why the diff has to be read.
 
 Two more things worth knowing:
 
