@@ -124,8 +124,10 @@ registers the **Quarkus Agents MCP** and **context7** MCP servers for Bob (via `
 and drops `AGENTS.md` into your project root. If you already added `AGENTS.md` for Codex, the same
 file serves Bob — there is no separate `BOB.md`.
 
-*Manual fallback:* configure the MCP servers in `.bob/mcp.json` at your project root (or
-`~/.bob/mcp_settings.json` for all projects), or from the **MCP** tab in the Bob UI:
+*Manual fallback:* configure the MCP servers in `.bob/mcp.json` at your project root, or globally
+from the **MCP** tab in the Bob UI (**Edit Global MCP**) — which is the reliable route, because
+Bob's own docs disagree about the global file's path: the IDE docs say `~/.bob/mcp.json`, the Shell
+docs say `~/.bob/mcp_settings.json`. Either way the contents are the same:
 
 ```json
 {
@@ -148,7 +150,10 @@ skills into `.bob/skills/` for you:
 ./scripts/install-bob-skill.sh --global          # into ~/.bob/skills/
 ```
 
-Bob asks for approval before activating a skill the first time.
+Bob asks for approval before activating a skill — once per conversation, not once ever; the setting
+is a single global toggle rather than a per-skill grant. Two things to know while you are here: a
+skill's `description` front-matter field is load-bearing (Bob ignores a skill without one), and
+skills are only available in Bob's **Advanced** mode.
 
 **Try it.** Use a trigger phrase such as *"scaffold a new Quarkus + LangChain4j project"*;
 `scaffold-project` produces the layout and starter files and `AGENTS.md` governs the conventions.
@@ -215,8 +220,10 @@ The split between skill and conventions is deliberate and non-overlapping:
 
 For Codex distribution, `.agents/plugins/marketplace.json` points to `plugins/quarkus-agentic-scaffolding/`.
 That directory is only a lightweight wrapper with symlinks back to `.codex-plugin/` and `skills/`,
-so the Claude and Codex packages share the same skill content. Bob does not use a marketplace; its
-skills are installed by the skills CLI (or `scripts/install-bob-skill.sh`) into `.bob/skills/`.
+so the Claude and Codex packages share the same skill content. Bob has a marketplace, but it
+distributes modes and MCP servers rather than skills (and is IBM-internal), so there is no
+marketplace channel for skills: Bob's are installed by the skills CLI (or
+`scripts/install-bob-skill.sh`) into `.bob/skills/`.
 
 ## Advanced — personal use (optional global install)
 
@@ -225,10 +232,11 @@ copying the file into each project:
 
 - **Claude** — move the contents of `CLAUDE.md` into the global `~/.claude/CLAUDE.md`.
 - **Codex** — move the contents of `AGENTS.md` into `~/.codex/AGENTS.md`.
-- **Bob** — Bob has no global conventions file, but it loads global *rules* from `~/.bob/rules/`;
-  drop the conventions there (for example `~/.bob/rules/quarkus-langchain4j.md`). Install the
-  skills globally with `./scripts/install-bob-skill.sh --global` (into `~/.bob/skills/`), and put
-  shared MCP servers in `~/.bob/mcp_settings.json`.
+- **Bob** — move the contents of `AGENTS.md` into `~/.bob/AGENTS.md`, Bob's documented global
+  context file. (Bob also loads global *rules* from `~/.bob/rules/`, so
+  `~/.bob/rules/quarkus-langchain4j.md` works too if you would rather keep them separate from your
+  general context.) Install the skills globally with `./scripts/install-bob-skill.sh --global`
+  (into `~/.bob/skills/`), and add shared MCP servers from the **MCP** tab's **Edit Global MCP**.
 
 **Trade-off (stated explicitly):** the global files apply to **all** work on your machine or
 agent profile. If you also work in other stacks (other languages, frameworks, or non-AI Java
@@ -255,7 +263,7 @@ them with your agent's own MCP commands; nothing here does it for you.
 | Plugin + marketplace (Codex) | `quarkus-agentic-scaffolding@eldermoraes` |
 | Extension (Gemini CLI) | `quarkus-agentic-scaffolding` |
 | The managed conventions block | `CLAUDE.md` / `AGENTS.md` in your project root |
-| The global conventions, if you did the [Advanced](#advanced--personal-use-optional-global-install) install | `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.bob/rules/<your-file>.md` |
+| The global conventions, if you did the [Advanced](#advanced--personal-use-optional-global-install) install | `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.bob/AGENTS.md` or `~/.bob/rules/<your-file>.md` |
 
 Three files `/setup-agentic-scaffolding` may have written are **kept**: `.cursor/mcp.json`,
 `opencode.json`, and `.bob/mcp.json`. Their entire content is the two MCP servers this boundary
@@ -364,7 +372,7 @@ Removing that region is the uninstall. Deleting the file is optional, and only s
 else is in it. Run these from your project root, on `CLAUDE.md` (Claude) or `AGENTS.md` (Codex,
 Bob, Gemini, Cursor, opencode). For the [Advanced](#advanced--personal-use-optional-global-install)
 install, substitute the global path — `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, or
-`~/.bob/rules/<your-file>.md`.
+`~/.bob/AGENTS.md` (or `~/.bob/rules/<your-file>.md`, if you used a rules file instead).
 
 ```bash
 # 1. Back up, without clobbering an existing .bak

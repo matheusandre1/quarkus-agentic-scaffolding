@@ -268,10 +268,11 @@ versioning.
   Quarkus Agents MCP + context7 setup as a `.bob/mcp.json` entry
   (`jbang quarkus-agent-mcp@quarkusio`, `npx -y @upstash/context7-mcp`). The Quarkus Agents MCP is a
   standalone MCP server whose docs list IBM Bob as a supported client.
-- **Fixed the Codex setup commands.** Replaced the non-existent `codex plugin add` with installing
-  the plugin from the `/plugins` list after `codex plugin marketplace add`, and switched the Quarkus
-  Agents MCP from a (non-existent) Codex plugin to
-  `codex mcp add quarkus-agent -- jbang quarkus-agent-mcp@quarkusio`. Added a "Try it" step for parity.
+- **Fixed the Codex setup commands.** Replaced `codex plugin add`, which was not available in the
+  Codex version targeted at the time, with installing the plugin from the `/plugins` list after
+  `codex plugin marketplace add`, and switched the Quarkus Agents MCP from a (non-existent) Codex
+  plugin to `codex mcp add quarkus-agent -- jbang quarkus-agent-mcp@quarkusio`. Added a "Try it"
+  step for parity.
 - `AGENTS.md` is now the shared conventions file for both Codex and Bob; `README.md` and
   `CONTRIBUTING.md` updated to drop `BOB.md` / `.bob-plugin/` and reflect the per-agent install paths.
 - All version headers synchronized to 0.7.0.

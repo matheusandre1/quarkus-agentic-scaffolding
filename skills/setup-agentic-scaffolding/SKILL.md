@@ -138,7 +138,7 @@ secrets by design (see the context7 note above), so "exact" is literal: what you
 | Cursor | Write `.cursor/mcp.json` with both servers (`mcpServers` map, same command/args) | Settings → MCP shows both; user **toggles them on** | GUI enable |
 | GitHub Copilot CLI | `copilot mcp add quarkus-agent -- jbang io.quarkus:quarkus-agent-mcp:1.2.5:runner` · `copilot mcp add context7 -- npx -y @upstash/context7-mcp@4.0.0` | `copilot mcp list` | **Yes** — live immediately |
 | opencode | Write `opencode.json` `mcp` key with both servers | `/mcp` in session | **Yes** — hot reload |
-| Bob (D3) | Write `.bob/mcp.json` (project) or `~/.bob/mcp_settings.json` (global) with both servers | MCP tab in the Bob UI lists both | Reload in UI |
+| Bob (D3) | Write `.bob/mcp.json` (project) or `~/.bob/mcp.json` (global; the Bob Shell docs call it `mcp_settings.json` — prefer the UI's **Edit Global MCP**) with both servers | MCP tab in the Bob UI lists both | Reload in UI |
 
 The `.cursor/mcp.json`, `opencode.json`, and `.bob/mcp.json` map has the same shape everywhere:
 
