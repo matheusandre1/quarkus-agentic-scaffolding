@@ -3,6 +3,60 @@
 All notable changes to this artifact are documented here. This project adheres to semantic
 versioning.
 
+## v0.17.0 — 2026-08-10
+- **Documented how to uninstall this artifact — and only this artifact.** New `## Uninstall`
+  section in `README.md`, placed after *Advanced — personal use* because it depends on what that
+  section describes. One removal block per install path (skills CLI, Claude plugin, Codex plugin,
+  Bob, Gemini extension), each with its verification command, then the managed-block procedure for
+  the conventions file and a verify sweep. The boundary is the feature: JDK 25 / GraalVM, JBang, the
+  container runtime, the **Quarkus Agents MCP**, **context7**, `superpowers`, and every project
+  `/scaffold-project` generated all survive. `.cursor/mcp.json`, `opencode.json`, and `.bob/mcp.json`
+  are kept for the same reason — their entire content is the two MCP servers the boundary protects.
+  The *Advanced* section's "Precedence and reverting" paragraph loses its reverting half and
+  cross-references the new section, so undo lives in one place.
+- **Every published command was validated against primary sources** — `--help` output, CLI source,
+  and official docs — by six read-only subagents before publication. Three findings changed what
+  shipped:
+  - *The `sed` procedure was destructive and is gone.* A count-based precheck
+    (`grep -c …`, expect 2) does not gate the dangerous cases: a user writing *about* the markers,
+    markers out of order, and both markers on one line all pass it, and `sed` then deletes
+    user-authored lines — to end of file in two of the three. Counts cannot fix it (they carry no
+    ordering, and `grep -c` counts lines, not occurrences). Published instead: an `awk` precheck
+    that anchors on `^<!--` and compares line numbers, plus a `perl -0777 -i -pe` substitution that
+    *requires* both markers, so an incomplete or out-of-order pair leaves the file byte-for-byte
+    untouched. `\r?` for CRLF, `\n?` for a block whose `END` is the last line without a trailing
+    newline.
+  - *The skills-CLI command was simply broken.* `npx skills remove -s A B C -a '*' -y` removes
+    nothing: `remove` has no `-s/--skill` (it exists on `add`) and never expands `'*'`, so it exits
+    1 with `Invalid agents: *`. Published: positional skill names and no `-a`, which cleans every
+    known agent including ghost symlinks. The `--all` warning was corrected too — contrary to its
+    own `--help`, `--all` does not imply `-y`, and removal deletes real files.
+  - *`gemini mcp add` defaults to `--scope project`.* The re-add commands pass `-s user`, and run
+    *after* the uninstall, because a `settings.json` registration shadows an extension-declared
+    server of the same name.
+- **`scripts/uninstall-bob-skill.sh`** — the mirror of `install-bob-skill.sh`, because Bob has no
+  manifest, registry, or command for removing a skill; deleting the directory is the whole
+  uninstall. Ownership-checked (a skill of your own sitting in a directory called `audit-project` is
+  skipped, not deleted), symlink-safe (unlinks rather than recursing into the target), idempotent,
+  and scoped to the three skill directories — `.bob/mcp.json`, `.bob/rules/`, and your other skills
+  are never touched.
+- **Two behavior tests, because a destructive script and a destructive one-liner do not validate by
+  reading.** `ci/test-uninstall-bob-skill.sh` covers the install/uninstall round trip, idempotency,
+  the ownership and symlink guards, and `--global` with `HOME` redirected into a temp directory.
+  `ci/test-conventions-block-removal.sh` runs the published commands over 13 fixtures — including
+  every input the old `sed` procedure destroyed — and asserts that each refusal leaves the file
+  byte-for-byte identical, plus a drift guard that fails if `README.md` stops publishing the exact
+  validated commands. Both run in a new `behavior-tests` job in the quality workflow.
+- **Corrected five pre-existing claims** the validation surfaced (details and sources in the
+  commit): `~/.bob/AGENTS.md` *is* Bob's documented global context file; Bob's marketplace exists
+  but carries modes and MCP servers rather than skills; the global MCP path is documented
+  inconsistently by IBM's own two doc sets, so both names appear and the UI's **Edit Global MCP** is
+  recommended; skill approval is once per conversation via a single global boolean; and
+  `codex plugin add` does exist, so the v0.7.0 entry's present-tense "non-existent" was softened to
+  name the version instead. Two additions to the Bob section: a skill's `description` is
+  load-bearing, and skills require Bob's **Advanced** mode.
+- All version headers synchronized to 0.17.0.
+
 ## v0.16.0 — 2026-08-10
 - **Resolved the remaining skills.sh audit findings with engineering, not scan-appeasement.** The
   Gen Agent Trust Hub report on `setup-agentic-scaffolding` (HIGH, four findings) and the Snyk
