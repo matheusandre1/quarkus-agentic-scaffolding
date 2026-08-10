@@ -246,7 +246,7 @@ mixes stacks, the per-project drop-in is recommended over the global install.
 **Precedence.** A project-root convention file is read *in addition to* a global one, and project
 guidance can override broader global rules. To undo a global install, see
 [Uninstall](#uninstall) — the same managed-block procedure applies to `~/.claude/CLAUDE.md`,
-`~/.codex/AGENTS.md`, and `~/.bob/rules/<your-file>.md`.
+`~/.codex/AGENTS.md`, and `~/.bob/AGENTS.md` or `~/.bob/rules/<your-file>.md`.
 
 ## Uninstall
 
