@@ -4,7 +4,7 @@ description: Scaffold Quarkus + LangChain4j projects end-to-end and add agentic 
 ---
 
 # Quarkus + LangChain4j Scaffolding
-# Version: 0.14.0
+# Version: 0.15.0
 
 **Prerequisites.** The Quarkus Agents MCP, context7, and the project conventions file
 (`CLAUDE.md` for Claude, `AGENTS.md` for Codex) should already be configured — if they are
@@ -192,7 +192,7 @@ the workflow.
 ## 9. RAG pipeline scaffolding
 
 Use `templates/RagSetup.java.template`. Default to **Easy RAG**: add `quarkus-langchain4j-easy-rag`
-plus an in-process embedding model (`langchain4j-embeddings-all-minilm-l6-v2`), drop documents
+plus an in-process embedding model (`langchain4j-embeddings-bge-small-en-v15-q`), drop documents
 into the folder referenced by `quarkus.langchain4j.easy-rag.path`, and let Quarkus ingest them on
 startup — no retriever code required. The template also includes a commented, **opt-in** manual
 path (a CDI-produced `EmbeddingStore` + `EmbeddingStoreContentRetriever` + `RetrievalAugmentor`)

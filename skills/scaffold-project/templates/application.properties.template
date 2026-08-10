@@ -2,25 +2,28 @@
 # Quarkus + LangChain4j configuration
 #
 # Provider: Ollama, local-first. Requires a running Ollama (`ollama serve`,
-# default endpoint http://localhost:11434) and the model pulled locally:
-#   ollama pull llama3.2
-#   ollama pull llama3.2:1b
-# Models with >= 3B parameters follow system prompts more reliably; llama3.2 (3B)
-# is a good default for structured output and agents.
+# default endpoint http://localhost:11434) and the models pulled locally:
+#   ollama pull qwen3:4b
+#   ollama pull qwen3:1.7b
+# qwen3 is what the official quarkus-langchain4j Ollama guide uses, and its
+# tool-calling is markedly better than llama3.2's — which is what the tool and
+# agent templates here exercise. Models with >= 3B parameters follow system
+# prompts more reliably, so qwen3:4b is the default and qwen3:1.7b backs the
+# "smaller" named model below.
 # ============================================================================
 
 # --- Ollama endpoint (uncomment to override the default) ---
 # quarkus.langchain4j.ollama.base-url=http://localhost:11434
 
 # --- Default chat model ---
-quarkus.langchain4j.ollama.chat-model.model-id=llama3.2
+quarkus.langchain4j.ollama.chat-model.model-id=qwen3:4b
 quarkus.langchain4j.ollama.chat-model.temperature=0.7
 quarkus.langchain4j.timeout=120s
 
 # --- Named "smaller" model: cheap/fast subtasks (classification, query rewriting). ---
 # Select it with @RegisterAiService(modelName = "smaller") or @ModelName("smaller").
 # Use temperature 0 for deterministic, structured results.
-quarkus.langchain4j.ollama.smaller.chat-model.model-id=llama3.2:1b
+quarkus.langchain4j.ollama.smaller.chat-model.model-id=qwen3:1.7b
 quarkus.langchain4j.ollama.smaller.chat-model.temperature=0
 quarkus.langchain4j.ollama.smaller.chat-model.num-predict=1024
 quarkus.langchain4j.ollama.smaller.timeout=60s
@@ -40,7 +43,7 @@ quarkus.langchain4j.devservices.enabled=false
 
 # ============================================================================
 # RAG (Easy RAG) — uncomment when the quarkus-langchain4j-easy-rag extension and
-# an in-process embedding model (langchain4j-embeddings-all-minilm-l6-v2) are on
+# an in-process embedding model (langchain4j-embeddings-bge-small-en-v15-q) are on
 # the classpath. Documents in this folder are ingested into an in-memory store on
 # startup; the in-process embedding model is detected automatically (no config).
 # ============================================================================

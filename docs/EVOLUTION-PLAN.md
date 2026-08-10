@@ -56,7 +56,7 @@ surfaced in Claude Code's `/plugin` Discover tab. Submission is via the form at
 **clau.de/plugin-directory-submission** (direct PRs are auto-closed). This is the single
 highest-surface listing available for the Claude side.
 
-### 4. Refresh the model defaults *(small template edit)*
+### 4. Refresh the model defaults *(small template edit)* — ✅ done 2026-08-10 (v0.15.0: qwen3:4b / qwen3:1.7b and bge-small-en-v15-q)
 - **Chat:** the official quarkus-langchain4j Ollama guide now uses **`qwen3:1.7b`**
   ([guide](https://docs.quarkiverse.io/quarkus-langchain4j/dev/guide-ollama.html)); qwen3 has
   strong tool-calling, which matters for the agent templates. `llama3.2` is still the extension's

@@ -12,7 +12,7 @@ import io.quarkiverse.langchain4j.RegisterAiService;
  * ---------------------------------------------------------------------------
  * 1. Add the extension + an in-process embedding model (see pom.xml.template):
  *      io.quarkiverse.langchain4j:quarkus-langchain4j-easy-rag
- *      dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2
+ *      dev.langchain4j:langchain4j-embeddings-bge-small-en-v15-q
  * 2. Configure the documents folder (see application.properties.template):
  *      quarkus.langchain4j.easy-rag.path=src/main/resources/rag
  * 3. Drop your documents into that folder. They are ingested into an in-memory

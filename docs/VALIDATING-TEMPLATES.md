@@ -29,7 +29,7 @@ before shipping a release, and whenever you touch a template.
    owns the shell. Instead, confirm the generated `pom.xml` imports both `quarkus-bom` and
    `quarkus-langchain4j-bom` under `io.quarkus.platform`, and that the extension list above still
    resolves. Then confirm the **non-extension** deps in `pom.xml.template`
-   (`langchain4j-embeddings-all-minilm-l6-v2`, `langchain4j-document-parser-apache-pdfbox`) still
+   (`langchain4j-embeddings-bge-small-en-v15-q`, `langchain4j-document-parser-apache-pdfbox`) still
    resolve via the BOM with no explicit `<version>`.
 
 3. **Materialize the templates** into `src/main/java/org/acme/` and `src/main/resources/`:
@@ -40,7 +40,7 @@ before shipping a release, and whenever you touch a template.
      `/* ===== File: <path> ===== */` marker) under `dto/`, `ai/`, `workflow/`, `web/`.
 
 4. **Build/run via the MCP.** Start dev mode (`quarkus_start`) with a real Ollama endpoint reachable
-   and an in-process embedding model on the classpath (`langchain4j-embeddings-all-minilm-l6-v2`)
+   and an in-process embedding model on the classpath (`langchain4j-embeddings-bge-small-en-v15-q`)
    plus `quarkus.langchain4j.easy-rag.path` set, so Easy RAG augmentation is satisfied. A clean
    start means augmentation **and** compilation succeeded.
 
@@ -86,7 +86,7 @@ When you only need to know *"does the template Java still compile against the cu
 - **0.6.0 (2026-06-03):** platform `3.36.1`. After slimming `pom.xml.template` to a dependency
   reference: regenerated the shell via `quarkus_create` (core + agents + RAG — all extensions
   resolved) and confirmed the two non-extension deps now listed in the template
-  (`langchain4j-embeddings-all-minilm-l6-v2`, `langchain4j-document-parser-apache-pdfbox`) resolve
+  (`langchain4j-embeddings-bge-small-en-v15-q`, `langchain4j-document-parser-apache-pdfbox`) resolve
   via `quarkus-langchain4j-bom` with **no** `<version>` (1.14.1-beta24). `BUILD SUCCESS`.
 - **0.5.0 (2026-06-03):** platform `3.36.1`, `maven.compiler.release` 25. Generated a throwaway
   project with the `rest-jackson` extension list and compiled all 14 materialized template files
