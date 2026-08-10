@@ -1,0 +1,103 @@
+name: watch-ecosystem
+# Detection only: opens an issue when an upstream project ships a minor line newer than the one
+# ci/baseline.env tracks, so the conventions, templates, and extension menu can be reviewed
+# against it. It never edits code and never opens a fix PR — acting on the notice is a human
+# decision. Patch releases are left to Renovate; the weekly validate-templates cron independently
+# builds against the live platform.
+on:
+  schedule:
+    - cron: '0 6 * * *'   # daily, 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  releases:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check the Quarkus platform
+        id: quarkus
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ci/check-upstream-release.sh quarkusio/quarkus QUARKUS_PLATFORM_VERSION >> "$GITHUB_OUTPUT"
+
+      - name: Announce a new Quarkus minor
+        if: steps.quarkus.outputs.new_line != ''
+        uses: ./.github/actions/issue-by-title
+        with:
+          mode: announce
+          label: ecosystem
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Quarkus ${{ steps.quarkus.outputs.new_line }} released — review conventions and templates"
+          body: |
+            Quarkus **${{ steps.quarkus.outputs.version }}** is out, opening the
+            `${{ steps.quarkus.outputs.new_line }}` line. `ci/baseline.env` currently tracks
+            `${{ steps.quarkus.outputs.tracked }}`.
+
+            Release notes: ${{ steps.quarkus.outputs.notes_url }}
+            All releases: https://github.com/quarkusio/quarkus/releases
+
+            What to look at — close this issue if none of it applies:
+
+            - [ ] Do the conventions (`CLAUDE.md` / `AGENTS.md`) still describe current practice?
+            - [ ] Do any `scaffold-project` templates use an API that changed?
+            - [ ] Are there new extensions worth adding to the extension menu?
+            - [ ] Does the Java baseline or the GraalVM/native note need revisiting?
+
+            Renovate raises the `ci/baseline.env` bump separately; this issue is about content,
+            not the version number.
+
+            <sub>Opened automatically by the `watch-ecosystem` workflow. Detection only — no code
+            was changed and no fix PR was opened.</sub>
+
+      - name: Check quarkus-langchain4j
+        id: langchain4j
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ci/check-upstream-release.sh quarkiverse/quarkus-langchain4j QUARKUS_LANGCHAIN4J_BOM_VERSION >> "$GITHUB_OUTPUT"
+
+      - name: Announce a new quarkus-langchain4j minor
+        if: steps.langchain4j.outputs.new_line != ''
+        uses: ./.github/actions/issue-by-title
+        with:
+          mode: announce
+          label: ecosystem
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "quarkus-langchain4j ${{ steps.langchain4j.outputs.new_line }} released — review conventions and templates"
+          body: |
+            quarkus-langchain4j **${{ steps.langchain4j.outputs.version }}** is out, opening the
+            `${{ steps.langchain4j.outputs.new_line }}` line. `ci/baseline.env` currently tracks
+            `${{ steps.langchain4j.outputs.tracked }}`.
+
+            Release notes: ${{ steps.langchain4j.outputs.notes_url }}
+            All releases: https://github.com/quarkiverse/quarkus-langchain4j/releases
+
+            What to look at — close this issue if none of it applies:
+
+            - [ ] Did the agentic annotations (`@Agent`, `@SequenceAgent`, `@ParallelAgent`,
+                  `@SupervisorAgent`) change shape?
+            - [ ] Do the AI-service, tool, RAG, MCP, or guardrail templates still compile against
+                  the documented API?
+            - [ ] Are there new extensions worth adding to the extension menu?
+            - [ ] Does anything in conventions §4 need rewording?
+
+            <sub>Opened automatically by the `watch-ecosystem` workflow. Detection only — no code
+            was changed and no fix PR was opened.</sub>
+
+      - name: Track failure in an issue
+        if: failure() && github.event_name == 'schedule'
+        uses: ./.github/actions/issue-by-title
+        with:
+          title: Ecosystem watcher failed on scheduled run
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Close the tracking issue once the run recovers
+        if: success() && github.event_name == 'schedule'
+        uses: ./.github/actions/issue-by-title
+        with:
+          title: Ecosystem watcher failed on scheduled run
+          mode: resolve
+          token: ${{ secrets.GITHUB_TOKEN }}

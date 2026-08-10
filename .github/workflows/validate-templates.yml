@@ -39,13 +39,13 @@ jobs:
           fi
       - name: Track failure in an issue
         if: failure() && github.event_name == 'schedule'
-        uses: ./.github/actions/track-failure
+        uses: ./.github/actions/issue-by-title
         with:
           title: Template build failed on scheduled run
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Close the tracking issue once the run recovers
         if: success() && github.event_name == 'schedule'
-        uses: ./.github/actions/track-failure
+        uses: ./.github/actions/issue-by-title
         with:
           title: Template build failed on scheduled run
           mode: resolve
@@ -70,13 +70,13 @@ jobs:
           fail: true
       - name: Track failure in an issue
         if: failure() && github.event_name == 'schedule'
-        uses: ./.github/actions/track-failure
+        uses: ./.github/actions/issue-by-title
         with:
           title: Link check failed on scheduled run
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Close the tracking issue once the run recovers
         if: success() && github.event_name == 'schedule'
-        uses: ./.github/actions/track-failure
+        uses: ./.github/actions/issue-by-title
         with:
           title: Link check failed on scheduled run
           mode: resolve

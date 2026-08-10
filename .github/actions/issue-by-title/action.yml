@@ -1,0 +1,111 @@
+name: Manage an issue by title
+description: >-
+  Open, comment on, close, or announce a GitHub issue identified by its exact title.
+  Used for CI failure tracking (track/resolve) and upstream release notices (announce).
+  Replaces jayqi/failed-build-issue-action, which still targets Node 20.
+
+inputs:
+  title:
+    description: Title of the issue. Matched exactly — this is what identifies it.
+    required: true
+  mode:
+    description: >-
+      'track' opens the issue or comments on it after a failure; 'resolve' closes it after a
+      success; 'announce' opens it once and does nothing if an issue with this title already
+      exists in any state. Callers gate track/resolve with `if: failure()` / `if: success()`.
+    required: false
+    default: track
+  body:
+    description: Body for 'announce'. Ignored by 'track' and 'resolve', which build their own.
+    required: false
+    default: ''
+  label:
+    description: Label applied to the issue. Created if missing.
+    required: false
+    default: build failed
+  token:
+    description: Token used to read, create, comment on, and close issues. Needs issues:write.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Manage the issue
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        TITLE: ${{ inputs.title }}
+        MODE: ${{ inputs.mode }}
+        BODY: ${{ inputs.body }}
+        LABEL: ${{ inputs.label }}
+        REPO: ${{ github.repository }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        TREE_URL: ${{ github.server_url }}/${{ github.repository }}/tree/${{ github.ref_name }}
+        COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+        WORKFLOW: ${{ github.workflow }}
+        RUN_NUMBER: ${{ github.run_number }}
+        EVENT_NAME: ${{ github.event_name }}
+        REF_NAME: ${{ github.ref_name }}
+        SHA: ${{ github.sha }}
+      run: |
+        set -euo pipefail
+
+        case "$MODE" in
+          track|resolve|announce) ;;
+          *) echo "Unknown mode '$MODE' (expected 'track', 'resolve', or 'announce')" >&2; exit 1 ;;
+        esac
+
+        # `gh issue create --label` fails on a label that does not exist yet.
+        ensure_label() {
+          gh label create "$LABEL" --repo "$REPO" --color B60205 \
+            --description 'Opened automatically by a scheduled workflow' >/dev/null 2>&1 || true
+        }
+
+        # An issue with this exact title is the one this caller owns. Matching on the title,
+        # not just the label, keeps each check's issue separate.
+        find_issue() {
+          gh issue list --repo "$REPO" --state "$1" --label "$LABEL" --limit 100 \
+            --json number,title \
+            --jq '[.[] | select(.title == env.TITLE) | .number] | first // empty'
+        }
+
+        if [ "$MODE" = announce ]; then
+          # Search every state: a closed issue means the maintainer already triaged this
+          # release, so re-opening it would be noise.
+          if [ -n "$(find_issue all)" ]; then
+            echo 'An issue with that title already exists; nothing to announce'
+            exit 0
+          fi
+          echo 'Announcing in a new issue'
+          ensure_label
+          gh issue create --repo "$REPO" --title "$TITLE" --label "$LABEL" --body "$BODY"
+          exit 0
+        fi
+
+        existing=$(find_issue open)
+
+        if [ "$MODE" = resolve ]; then
+          if [ -z "$existing" ]; then
+            echo 'No open tracking issue with that title; nothing to close'
+            exit 0
+          fi
+          echo "Run recovered; closing issue #$existing"
+          gh issue close "$existing" --repo "$REPO" --reason completed --comment \
+            "Recovered: [$WORKFLOW #$RUN_NUMBER]($RUN_URL) passed on [\`${SHA:0:7}\`]($COMMIT_URL). Closing automatically."
+          exit 0
+        fi
+
+        failure_body=$(printf '%s\n\n%s\n%s\n%s\n' \
+          "GitHub Actions workflow [$WORKFLOW #$RUN_NUMBER]($RUN_URL) failed." \
+          "Event: $EVENT_NAME" \
+          "Branch: [$REF_NAME]($TREE_URL)" \
+          "Commit: [\`${SHA:0:7}\`]($COMMIT_URL)")
+
+        if [ -n "$existing" ]; then
+          echo "Commenting on existing issue #$existing"
+          gh issue comment "$existing" --repo "$REPO" --body "$failure_body"
+        else
+          echo 'No open tracking issue with that title; creating one'
+          ensure_label
+          gh issue create --repo "$REPO" --title "$TITLE" --label "$LABEL" --body "$failure_body"
+        fi
