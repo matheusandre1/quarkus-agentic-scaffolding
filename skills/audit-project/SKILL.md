@@ -29,10 +29,12 @@ Invoke it as `/audit-project` (skills-CLI install) or `/quarkus-agentic-scaffold
 install) — both name the same skill.
 
 **Required tooling (mandatory).** This skill needs the **Quarkus Agents MCP** (for version-matched
-validation via `quarkus_skills` / `quarkus_searchDocs` with `projectDir`) and the project's
-**conventions file** (`CLAUDE.md` / `AGENTS.md` / `GEMINI.md`) as the source of truth for the
-checks. If either is missing, stop and tell the user to run `/setup-agentic-scaffolding` first,
-then re-run this audit. Do not fall back to model memory or a generic web search.
+validation via `quarkus_skills` / `quarkus_searchDocs` with `projectDir`); if it is absent or
+unreachable, stop per the gate above. The project's **conventions file** (`CLAUDE.md` /
+`AGENTS.md` / `GEMINI.md`) is the preferred source of truth for the checks — but a missing
+conventions file does **not** stop the audit: record it as a HIGH finding (§5.0) and audit against
+this skill's §5 catalog directly, which mirrors the canonical conventions. Do not fall back to
+model memory or a generic web search.
 
 ## 2. Read-only contract
 
@@ -45,7 +47,7 @@ hand off each confirmed fix to `/scaffold-project`'s component scaffolding (AI s
 agents, RAG, MCP, guardrails) or, for the conventions file itself, to `/setup-agentic-scaffolding`
 Phase C. The audit's job ends at a prioritized report plus that offer.
 
-## 3. Two entry scenarios
+## 3. Three entry scenarios
 
 Detect the scenario — do not ask when it is determinable from `pom.xml` and the source tree.
 
@@ -57,8 +59,15 @@ Detect the scenario — do not ask when it is determinable from `pom.xml` and th
   profile, BOM discipline) and which pieces are missing to adopt the stack. End the report pointing
   at `/setup-agentic-scaffolding` **Phase C** (to add the conventions file) and `/scaffold-project`
   (to add the missing AI service, agents, RAG, or MCP components).
+- **(c) Legacy Quarkus project** — a Quarkus project on a discontinued platform line (an EOL
+  Quarkus release), an unsupported Java release, or a LangChain4j vintage that predates or falls
+  outside the `quarkus-langchain4j-bom` lineage — including projects with **no conventions file at
+  all**. **Do not stop.** Run the audit as a gap analysis (b), opening the report with the §5.0
+  platform-lifecycle findings; confirm support status through the Quarkus Agents MCP
+  (`quarkus_searchDocs` with `projectDir`), never from memory.
 
-If neither pattern is clear (e.g. not a Quarkus project at all), say so and stop.
+Stop only when the target is **not a Quarkus project at all** — no Quarkus BOM, plugin, or
+extension anywhere in the build. Say so plainly and end the turn.
 
 ## 4. Process
 
@@ -66,7 +75,8 @@ Follow **Explore → Audit → Report**. Stay read-only throughout.
 
 1. **Explore.** Read `pom.xml` (BOMs, extensions, compiler config, profiles),
    `application.properties`, and the `src/main/java` tree (package layout, annotations). Confirm
-   the conventions file is present. When the Quarkus Agents MCP is available, pass `projectDir` to
+   whether the conventions file is present — if it is absent, record a §5.0 finding and keep
+   going. When the Quarkus Agents MCP is available, pass `projectDir` to
    `quarkus_skills` / `quarkus_searchDocs` so extension patterns and versions are validated against
    **this** project's platform version, not from memory.
 2. **Audit.** Walk the check catalog (§5) area by area. For each check, record pass / fail /
@@ -77,6 +87,20 @@ Follow **Explore → Audit → Report**. Stay read-only throughout.
 
 Derived from the conventions file §2–§5. Each check cites the section it enforces. Mark a check
 **N/A** when its precondition does not hold (e.g. native checks when there is no native profile).
+A failed precondition below (§5.0) is itself a finding, never a reason to abort the audit.
+
+### 5.0 Platform lifecycle (preconditions as findings)
+
+These checks run first and **never block the audit** — when one fails, record the finding and keep
+walking the rest of the catalog. Validate support status via the Quarkus Agents MCP with
+`projectDir`, never from model memory.
+
+| Check | Look for | Pass when | On fail |
+|---|---|---|---|
+| Supported Quarkus line | platform BOM version in `pom.xml` | the version is a currently supported Quarkus release (confirm via `quarkus_searchDocs`) | HIGH finding; keep auditing |
+| Supported Java release | `maven.compiler.release` / `<java.version>` | the JDK line still receives support (EOL releases such as 8 or 11 fail) | HIGH finding; keep auditing |
+| LangChain4j lineage | `langchain4j*` / `quarkus-langchain4j*` artifacts | versions are managed by `quarkus-langchain4j-bom` (no pre-BOM or retired artifacts) | HIGH finding; keep auditing |
+| Conventions file present | `CLAUDE.md` / `AGENTS.md` / `GEMINI.md` at project root | the file exists | HIGH finding; audit against this skill's §5 catalog directly |
 
 ### 5.1 Java (§2)
 
@@ -122,7 +146,9 @@ Derived from the conventions file §2–§5. Each check cites the section it enf
 ## 6. Report format
 
 - **High** — breaks a mandatory convention (pinned extension versions, manual `ChatModel` wiring,
-  hand-rolled retry loops, Mutiny inside the engine, missing BOM import).
+  hand-rolled retry loops, Mutiny inside the engine, missing BOM import) or a §5.0 platform
+  precondition (EOL Quarkus line, unsupported Java release, pre-BOM LangChain4j, missing
+  conventions file).
 - **Medium** — drift that will bite later (missing native profile, no observability extensions,
   Dev Services left on against a real endpoint, `ThreadLocal` for agent identity).
 - **Low** — polish (missing dev logging, DTOs that could be records, missing wiring smoke test).
