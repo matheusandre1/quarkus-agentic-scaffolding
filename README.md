@@ -260,7 +260,9 @@ scaffolding and setup in the skills, rules in `CLAUDE.md` or `AGENTS.md`.
 - **`audit-project`** (user-invoked) is read-only by default: it audits an existing project
   against §2–§5, the package layout, and the dependency/properties baseline, and reports
   prioritized findings with evidence and a suggested fix each — applying fixes only after you
-  confirm, by handing off to `scaffold-project`'s component sections.
+  confirm, by handing off to `scaffold-project`'s component sections. Platform upgrades (an EOL
+  Quarkus line, an unsupported Java release, pre-BOM LangChain4j) have no such handoff: they stay
+  your own step.
 
 The split between skill and conventions is deliberate and non-overlapping:
 

@@ -11,9 +11,9 @@ versioning.
   lifecycle" check area turns the former hard stops into audit items: an EOL Quarkus platform line,
   an unsupported Java release, a LangChain4j vintage outside the `quarkus-langchain4j-bom` lineage,
   and a missing conventions file (`CLAUDE.md`/`AGENTS.md`/`GEMINI.md`). When the conventions file
-  is absent, the audit runs against the skill's own §5 catalog (which mirrors the canonical
-  conventions) and reports the absence as a finding. The only remaining project-side stop is "not a
-  Quarkus project at all"; the Quarkus Agents MCP gate is unchanged.
+  is absent, the audit runs against the skill's own §5 catalog (which covers the core of the
+  canonical conventions) and reports the absence as a finding. The only remaining project-side stop
+  is "not a Quarkus project at all"; the Quarkus Agents MCP gate is unchanged.
 
 ## v0.18.0 — 2026-08-10
 - **Every published Quarkus Agents MCP registration now pins the JDK: `jbang --java 21+

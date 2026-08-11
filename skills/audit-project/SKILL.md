@@ -33,8 +33,8 @@ validation via `quarkus_skills` / `quarkus_searchDocs` with `projectDir`); if it
 unreachable, stop per the gate above. The project's **conventions file** (`CLAUDE.md` /
 `AGENTS.md` / `GEMINI.md`) is the preferred source of truth for the checks — but a missing
 conventions file does **not** stop the audit: record it as a HIGH finding (§5.0) and audit against
-this skill's §5 catalog directly, which mirrors the canonical conventions. Do not fall back to
-model memory or a generic web search.
+this skill's §5 catalog directly, which covers the core of the canonical conventions. Do not fall
+back to model memory or a generic web search.
 
 ## 2. Read-only contract
 
@@ -59,12 +59,14 @@ Detect the scenario — do not ask when it is determinable from `pom.xml` and th
   profile, BOM discipline) and which pieces are missing to adopt the stack. End the report pointing
   at `/setup-agentic-scaffolding` **Phase C** (to add the conventions file) and `/scaffold-project`
   (to add the missing AI service, agents, RAG, or MCP components).
-- **(c) Legacy Quarkus project** — a Quarkus project on a discontinued platform line (an EOL
-  Quarkus release), an unsupported Java release, or a LangChain4j vintage that predates or falls
-  outside the `quarkus-langchain4j-bom` lineage — including projects with **no conventions file at
-  all**. **Do not stop.** Run the audit as a gap analysis (b), opening the report with the §5.0
-  platform-lifecycle findings; confirm support status through the Quarkus Agents MCP
-  (`quarkus_searchDocs` with `projectDir`), never from memory.
+- **(c) Legacy Quarkus project** — not a third report shape but a **modifier** on (a) or (b): a
+  Quarkus project on a discontinued platform line (an EOL Quarkus release), an unsupported Java
+  release, or a LangChain4j vintage that predates or falls outside the `quarkus-langchain4j-bom`
+  lineage. **Do not stop.** The report shape still follows the LangChain4j footprint — conformance
+  (a) when the project already uses the stack, gap analysis (b) when it does not — and simply
+  opens with the §5.0 platform-lifecycle findings on top. Confirm support status through the
+  Quarkus Agents MCP (`quarkus_searchDocs` with `projectDir`), never from memory. A missing
+  conventions file is its own §5.0 row and likewise never changes the shape.
 
 Stop only when the target is **not a Quarkus project at all** — no Quarkus BOM, plugin, or
 extension anywhere in the build. Say so plainly and end the turn.
@@ -101,6 +103,13 @@ walking the rest of the catalog. Validate support status via the Quarkus Agents 
 | Supported Java release | `maven.compiler.release` / `<java.version>` | the JDK line still receives support (EOL releases such as 8 or 11 fail) | HIGH finding; keep auditing |
 | LangChain4j lineage | `langchain4j*` / `quarkus-langchain4j*` artifacts | versions are managed by `quarkus-langchain4j-bom` (no pre-BOM or retired artifacts) | HIGH finding; keep auditing |
 | Conventions file present | `CLAUDE.md` / `AGENTS.md` / `GEMINI.md` at project root | the file exists | HIGH finding; audit against this skill's §5 catalog directly |
+
+These rows enforce this skill's own lifecycle bar rather than a conventions section, so their
+Violates cell reads `platform lifecycle (§5.0)` — never a bare conventions §-number.
+
+Report each piece of evidence once. When the same evidence fails both a §5.0 row and a §5
+convention check (e.g. Java 11 fails "Supported Java release" *and* §5.1 "Language level ≥ 25"),
+emit the §5.0 finding only and mark the §5 check as subsumed by it — do not add a second row.
 
 ### 5.1 Java (§2)
 
@@ -169,5 +178,7 @@ as the anchor and add a short note below the table referencing its evidence cell
 
 Close with a **summary count** (`3 high, 2 medium, 4 low`) and the offer to apply fixes via
 `/scaffold-project` (components) or `/setup-agentic-scaffolding` Phase C (conventions file) **after
-you confirm**. When nothing fails, say so plainly — "No conformance issues found against §2–§5" —
-and stop; do not invent findings to fill the report.
+you confirm**. Say plainly that the other §5.0 platform-lifecycle findings — EOL Quarkus line,
+unsupported Java release, pre-BOM LangChain4j — have no automated handoff: the platform upgrade is
+the user's own step. When nothing fails, say so plainly — "No conformance issues found against
+§2–§5" — and stop; do not invent findings to fill the report.
