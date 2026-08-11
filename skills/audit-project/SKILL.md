@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Audit a Quarkus + LangChain4j Project
 
-# Version: 0.19.0
+# Version: 0.19.1
 
 ## Gate: verify the MCP first
 
@@ -51,9 +51,11 @@ Phase C. The audit's job ends at a prioritized report plus that offer.
 
 Detect the scenario — do not ask when it is determinable from `pom.xml` and the source tree.
 
-- **(a) Already on this stack** — the project imports `quarkus-langchain4j-bom` and uses
-  `@RegisterAiService` (or related LangChain4j extensions). Produce a **conformance report**: every
-  §2–§5 check below, scored against the current code.
+- **(a) Already on this stack** — the project has a LangChain4j footprint: ideally
+  `quarkus-langchain4j-bom` plus `@RegisterAiService` (or related LangChain4j extensions), but any
+  LangChain4j vintage counts — versions that predate or fall outside the BOM lineage still land
+  here, carrying their §5.0 finding. Produce a **conformance report**: every §2–§5 check below,
+  scored against the current code.
 - **(b) Plain Quarkus, adopting the stack** — a Quarkus project with no LangChain4j footprint.
   Produce a **gap analysis**: which conventions already hold (Java level, `-parameters`, native
   profile, BOM discipline) and which pieces are missing to adopt the stack. End the report pointing

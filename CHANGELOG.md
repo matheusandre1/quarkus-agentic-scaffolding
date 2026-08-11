@@ -3,6 +3,14 @@
 All notable changes to this artifact are documented here. This project adheres to semantic
 versioning.
 
+## v0.19.1 — 2026-08-11
+- **Audit scenario (a) is now footprint-based, closing a routing gap for off-lineage LangChain4j.**
+  Scenario (a) literally required the `quarkus-langchain4j-bom` import while (b) required no
+  LangChain4j footprint at all, so a project on a pre-BOM LangChain4j vintage — one of the very
+  legacy triggers §5.0 exists for — matched neither bullet. Any LangChain4j vintage now routes to
+  (a), with the off-lineage version reported as its §5.0 finding; (b) stays reserved for projects
+  with no LangChain4j footprint.
+
 ## v0.19.0 — 2026-08-11
 - **`/audit-project` now reports findings as a single severity-ordered markdown table** (Severity /
   Evidence / Finding / Violates / Fix) instead of per-finding text blocks. Severity grades (high,
