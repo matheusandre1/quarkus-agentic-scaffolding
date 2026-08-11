@@ -1,5 +1,5 @@
 # Quarkus + LangChain4j + AI Stack
-# Version: 0.17.0
+# Version: 0.18.0
 
 ## What this repository is
 
@@ -68,15 +68,27 @@ registers the **Quarkus Agents MCP** and **context7** MCP servers, and drops `CL
 project root. `CLAUDE.md` §1 makes those two MCP servers non-negotiable for this stack, and the
 setup skill is what puts them in place.
 
-*Manual fallback,* if you would rather wire it by hand: install the Quarkus Agents MCP with
-`/plugin marketplace add quarkusio/quarkus-agent-mcp` then `/plugin install quarkus-agent@quarkus-tools`;
-add context7 with `claude mcp add context7 -- npx -y @upstash/context7-mcp@4.0.0` (for higher rate limits
+*Manual fallback,* if you would rather wire it by hand: register the Quarkus Agents MCP with the
+pinned command
+`claude mcp add -s user quarkus-agent -- jbang --java 21+ io.quarkus:quarkus-agent-mcp:1.2.5:runner`;
+add context7 with `claude mcp add -s user context7 -- npx -y @upstash/context7-mcp@4.0.0` (for higher rate limits
 `export CONTEXT7_API_KEY=…` in your shell — the server picks it up from the environment, so no key
 belongs on the command line); optionally install superpowers with
 `/plugin marketplace add obra/superpowers-marketplace` then
 `/plugin install superpowers@superpowers-marketplace`; and copy [`CLAUDE.md`](CLAUDE.md) into your
 project root yourself (Claude only auto-loads it from a project root or `~/.claude/`, so no plugin
 can ship it for you).
+
+Quarkus also ships the server as a Claude plugin — `/plugin marketplace add
+quarkusio/quarkus-agent-mcp` then `/plugin install quarkus-agent@quarkus-tools`. Two things to know
+before you pick that route over the command above. It launches `jbang quarkus-agent-mcp@quarkusio`,
+and that alias resolves `io.quarkus:quarkus-agent-mcp:RELEASE:runner`, so what runs is whatever was
+newest when the server started — two machines set up a week apart run different code. And it passes
+no `--java`: the alias *does* declare `java-version: 21+`, but JBang 0.125.x ignores that for a GAV
+script-ref, so the server runs on JBang's default JDK 17 and dies with `UnsupportedClassVersionError`
+unless whatever launched it happens to export a JDK 21+ `JAVA_HOME`. Use one route or the other, not
+both — the plugin's server and a `claude mcp add` entry are both named `quarkus-agent`, so uninstall
+the plugin (`/plugin uninstall quarkus-agent@quarkus-tools`) before registering by hand.
 
 **Try it.** Open your project and use a trigger phrase such as *"scaffold a new Quarkus +
 LangChain4j project"*, *"create a new AI service"*, or *"set up a new RAG pipeline"* —
@@ -101,7 +113,7 @@ works for Codex too.)
 registers the **Quarkus Agents MCP** and **context7** MCP servers for Codex, and drops `AGENTS.md`
 into your project root. `AGENTS.md` §1 makes those two MCP servers non-negotiable for this stack.
 
-*Manual fallback:* add the Quarkus Agents MCP with `codex mcp add quarkus-agent -- jbang io.quarkus:quarkus-agent-mcp:1.2.5:runner`;
+*Manual fallback:* add the Quarkus Agents MCP with `codex mcp add quarkus-agent -- jbang --java 21+ io.quarkus:quarkus-agent-mcp:1.2.5:runner`;
 add context7 with `codex mcp add context7 -- npx -y @upstash/context7-mcp@4.0.0` (for higher rate limits
 `export CONTEXT7_API_KEY=…` in your shell — the server picks it up from the environment, so no key
 belongs on the command line); install/enable the Superpowers plugin if you use it; and copy
@@ -120,27 +132,67 @@ first-class agent in the skills CLI, so the [Quick install](#quick-install--any-
 `.bob/skills/` for you — that is the recommended path.
 
 **Set up the prerequisites.** Run `/setup-agentic-scaffolding` — it verifies the toolchain,
-registers the **Quarkus Agents MCP** and **context7** MCP servers for Bob (via `.bob/mcp.json`),
-and drops `AGENTS.md` into your project root. If you already added `AGENTS.md` for Codex, the same
-file serves Bob — there is no separate `BOB.md`.
+registers the **Quarkus Agents MCP** and **context7** MCP servers for Bob, and drops `AGENTS.md`
+into your project root. If you already added `AGENTS.md` for Codex, the same file serves Bob — there
+is no separate `BOB.md`.
 
-*Manual fallback:* configure the MCP servers in `.bob/mcp.json` at your project root, or globally
-from the **MCP** tab in the Bob UI (**Edit Global MCP**) — which is the reliable route, because
-Bob's own docs disagree about the global file's path: the IDE docs say `~/.bob/mcp.json`, the Shell
-docs say `~/.bob/mcp_settings.json`. Either way the contents are the same:
+*Manual fallback:* register both servers with Bob's own CLI (Bob 2.0.0), which writes the file Bob
+actually reads:
+
+```
+bob mcp add -s global quarkus-agent jbang -- --java 21+ io.quarkus:quarkus-agent-mcp:1.2.5:runner
+bob mcp add -s global context7 npx -- -y @upstash/context7-mcp@4.0.0
+bob mcp list
+```
+
+The `--` is required: without it Bob parses `--java` as one of its own options and exits with
+`error: unknown option '--java'`. Use `-s workspace` to register in the current project instead —
+but at that scope the file must already exist, or the command dies with `ENOENT … .bob/mcp.json`.
+Seed it **only if it is missing** — `>` truncates, and an existing file holds registrations worth
+keeping:
+
+```
+[ -f .bob/mcp.json ] || { mkdir -p .bob && printf '{"mcpServers":{}}\n' > .bob/mcp.json; }
+```
+
+At global scope Bob creates the file and its directory for you. On a name that is already registered, `add` refuses
+(`Error: MCP server "quarkus-agent" already exists`) — to *replace* a stale entry use
+`bob mcp add-json -s global quarkus-agent '{"command":"jbang","args":["--java","21+","io.quarkus:quarkus-agent-mcp:1.2.5:runner"]}'`,
+which overwrites in place. Read what `bob mcp list` prints, not just the name: an entry from an older
+setup shows its own command (an unpinned `jbang quarkus-agent-mcp@quarkusio`, say) and is exactly the
+case `add-json` is for.
+
+To write the JSON by hand instead, the global file is `~/.bob/settings/mcp.json` and the project
+file is `<project>/.bob/mcp.json` (a same-named server at project scope overrides global). Older
+Bob docs name `mcp_settings.json` in that same settings directory; Bob 2.0.0 treats it as legacy and
+migrates it **only when `mcp.json` does not yet exist**, so on a machine that already has `mcp.json`
+anything written to the legacy name is silently ignored. That cuts both ways, so **look before you
+register**: if `~/.bob/settings/mcp_settings.json` exists and `mcp.json` does not, start Bob once and
+let it migrate (it says so — *"your global MCP configuration has been migrated to mcp.json"*) before
+running any `bob mcp add`. Adding first creates `mcp.json` yourself, and the migration then never
+runs — your old servers stay in the legacy file, unread. If you set Bob up with a version of this
+guide before v0.18.0, also look for `~/.bob/mcp.json` and `~/.bob/mcp_settings.json` — one directory
+above `settings/`, which is where we used to point you; Bob reads neither, so a registration sitting
+there has never loaded. Contents either way:
 
 ```json
 {
   "mcpServers": {
-    "quarkus-agent": { "command": "jbang", "args": ["io.quarkus:quarkus-agent-mcp:1.2.5:runner"] },
+    "quarkus-agent": { "command": "jbang", "args": ["--java", "21+", "io.quarkus:quarkus-agent-mcp:1.2.5:runner"] },
     "context7":      { "command": "npx",   "args": ["-y", "@upstash/context7-mcp@4.0.0"] }
   }
 }
 ```
 
-(`jbang` must be on your PATH — install it with a package manager, e.g. `sdk install jbang` or
-`brew install jbang`. For higher rate limits `export CONTEXT7_API_KEY=…` in your environment rather
-than writing a literal key into the file; the server reads it from there.) If the skills CLI is
+(`jbang` must be on the PATH of whatever *starts* Bob — install it with a package manager, e.g.
+`sdk install jbang` or `brew install jbang`. A GUI-launched client gets a minimal PATH that contains
+none of the usual install locations, so if the server fails with `spawn jbang ENOENT`, put the
+absolute path from `command -v jbang` in `command` and keep the args as they are. `--java 21+` is not
+optional: the MCP server is compiled for Java 21, and JBang
+resolves its own JDK — it falls back to its default, currently 17, whenever the process that spawned
+it hands over no `JAVA_HOME`, which is exactly what Bob and other GUI-launched clients do. For higher
+rate limits `export CONTEXT7_API_KEY=…` in your environment rather than writing a literal key into
+the file; the server reads it from there.) If the skills CLI is
 unavailable, the repository's fallback helper installs all three
 skills into `.bob/skills/` for you:
 
@@ -236,7 +288,9 @@ copying the file into each project:
   context file. (Bob also loads global *rules* from `~/.bob/rules/`, so
   `~/.bob/rules/quarkus-langchain4j.md` works too if you would rather keep them separate from your
   general context.) Install the skills globally with `./scripts/install-bob-skill.sh --global`
-  (into `~/.bob/skills/`), and add shared MCP servers from the **MCP** tab's **Edit Global MCP**.
+  (into `~/.bob/skills/`), and add the shared MCP servers with the `bob mcp add -s global` commands
+  from [How to use with Bob](#how-to-use-with-bob) — not by hand in the **MCP** tab, which is how a
+  registration ends up without the `--java 21+` pin.
 
 **Trade-off (stated explicitly):** the global files apply to **all** work on your machine or
 agent profile. If you also work in other stacks (other languages, frameworks, or non-AI Java
@@ -265,9 +319,14 @@ them with your agent's own MCP commands; nothing here does it for you.
 | The managed conventions block | `CLAUDE.md` / `AGENTS.md` in your project root |
 | The global conventions, if you did the [Advanced](#advanced--personal-use-optional-global-install) install | `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.bob/AGENTS.md` or `~/.bob/rules/<your-file>.md` |
 
-Three files `/setup-agentic-scaffolding` may have written are **kept**: `.cursor/mcp.json`,
-`opencode.json`, and `.bob/mcp.json`. Their entire content is the two MCP servers this boundary
-protects, so deleting them would remove exactly what you asked to keep.
+The MCP config files `/setup-agentic-scaffolding` may have written are **kept**: `.cursor/mcp.json`,
+`opencode.json`, and Bob's `.bob/mcp.json` (project) or `~/.bob/settings/mcp.json` (global).
+Deleting them would remove exactly what this boundary protects — and for the two Bob files that is
+not even the whole story: `bob mcp add` merges into whatever is already there, so a global
+`~/.bob/settings/mcp.json` typically holds servers that have nothing to do with this artifact
+(possibly with credentials in them). If you do want our two servers gone, remove them **by entry**,
+never by file: `bob mcp remove -s global quarkus-agent` and `bob mcp remove -s global context7`
+(`-s workspace` for a project file), then `bob mcp list` to confirm what remains.
 
 ### 1. The skills
 
@@ -343,8 +402,9 @@ It removes only the three skills it installed, and only after reading each `SKIL
 is skipped with a warning rather than deleted. What the check cannot do is tell two identical
 declarations apart, so a skill of your own that *also* declares `name: audit-project` is
 indistinguishable from ours and **will** be removed. Move it aside before you run this. A symlinked
-skill is unlinked, not recursed into. `.bob/mcp.json`, `.bob/rules/`, and every other skill in
-`.bob/skills/` are left alone. Re-running it is a clean no-op. Skills load once per conversation, so
+skill is unlinked, not recursed into. Your MCP registration (`.bob/mcp.json` in a project,
+`~/.bob/settings/mcp.json` globally), `.bob/rules/`, and every other skill in `.bob/skills/` are
+left alone. Re-running it is a clean no-op. Skills load once per conversation, so
 **start a new conversation** in Bob afterwards.
 
 **Gemini CLI** — if you installed the extension, uninstalling it takes the two MCP servers it
@@ -352,7 +412,7 @@ declares with it, so add them back at user scope:
 
 ```
 gemini extensions uninstall quarkus-agentic-scaffolding
-gemini mcp add -s user quarkus-agent jbang io.quarkus:quarkus-agent-mcp:1.2.5:runner
+gemini mcp add -s user quarkus-agent jbang --java 21+ io.quarkus:quarkus-agent-mcp:1.2.5:runner
 gemini mcp add -s user context7 npx -y @upstash/context7-mcp@4.0.0
 gemini extensions list
 gemini mcp list

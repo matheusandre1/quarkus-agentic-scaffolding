@@ -5,7 +5,7 @@ disable-model-invocation: true
 ---
 
 # Setup Agentic Scaffolding
-# Version: 0.17.0
+# Version: 0.18.0
 
 ## 1. When to use this skill
 
@@ -68,6 +68,13 @@ Rules for Phase A:
 
 - **Report "already installed vs missing" honestly.** Show the probe output; never fabricate a
   version or a success.
+- **Give JBang a 21+ JDK here, not at the first MCP start.** Once JBang is present, check
+  `jbang jdk list`; if nothing 21 or newer is installed, run `jbang jdk install 21` (with approval —
+  it is a JDK-sized download). Skip this and JBang does that download *inside* the MCP handshake the
+  first time a client starts the server: it fetches a full JDK before the first protocol byte, the
+  client's `initialize` times out, and the user reads it as "the MCP is broken". Record
+  `command -v jbang`'s absolute path while you are here — §5 needs it for clients that spawn the
+  server without your PATH.
 - **Install only what the user approves**, one tool at a time, and **re-probe** after each install
   to confirm.
 - **Never pipe a downloaded script into a shell — not even with approval.** A package manager is
@@ -96,7 +103,7 @@ Rules for Phase A:
 
 Register two MCP servers through the running agent's own mechanism:
 
-- **quarkus-agent** — command `jbang`, args `io.quarkus:quarkus-agent-mcp:1.2.5:runner`
+- **quarkus-agent** — command `jbang`, args `--java 21+ io.quarkus:quarkus-agent-mcp:1.2.5:runner`
 - **context7** — command `npx`, args `-y @upstash/context7-mcp@4.0.0`. An API key raises the rate
   limits, but **do not put it on the command line**: over stdio the server falls back to the
   `CONTEXT7_API_KEY` environment variable whenever `--api-key` is absent, and a stdio server
@@ -116,8 +123,22 @@ reviewable change. Register the exact strings above — do not drop the version 
 Keeping them current is automation's job: Renovate watches these pins (`renovate.json`,
 `customManagers`) and opens a PR when upstream publishes a new release. Two notes on the pinned
 GAV: it is the same artifact the `quarkusio` catalog alias points at, only resolved to an explicit
-version, and a raw GAV drops the alias's `java-version: 21+` hint — which is moot here, because
-Phase A already requires JDK 25+.
+version, and a raw GAV drops the alias's `java-version: 21+` hint — which is why the registration
+carries `--java 21+` explicitly (see below).
+
+**`--java 21+` is part of the command, not decoration.** Do not drop it, and do not assume Phase A
+covers it. Phase A proves the *machine* has a JDK 25; it does not decide which JDK JBang picks.
+JBang resolves that itself, and it falls back to its own default JDK — 17 on JBang 0.125.x —
+whenever the process that spawned it exports no `JAVA_HOME` (GUI- and IDE-launched agents typically
+do not) or points at a JDK older than 21. Switching to the `quarkus-agent-mcp@quarkusio` alias does
+not save you either: the catalog entry does declare `java-version: 21+`, but JBang 0.125.x ignores
+it for a GAV `script-ref`, so the alias fails identically. The server is compiled for Java 21, so it
+then dies at boot with
+`UnsupportedClassVersionError: … class file version 65.0 … only recognizes … up to 61.0`, the client
+retries a few times and gives up, and the failure looks like "the MCP is not working" rather than a
+JDK mismatch. A terminal-launched agent that inherits a modern `JAVA_HOME` gets away without the
+flag by accident of the environment — which is precisely why the flag belongs in the command.
+`21+` is a floor, not a pin: JBang reuses an already-installed newer JDK instead of downloading 21.
 
 **Never handle a secret in plaintext.** Do not ask the user to paste an API key into the chat, do
 not embed a literal key in a command or a config file you write, and do not echo one back in
@@ -132,29 +153,99 @@ secrets by design (see the context7 note above), so "exact" is literal: what you
 
 | Agent | Register quarkus-agent + context7 | Verify | Live this session? |
 |---|---|---|---|
-| Claude Code | `claude mcp add -s user quarkus-agent -- jbang io.quarkus:quarkus-agent-mcp:1.2.5:runner` · `claude mcp add -s user context7 -- npx -y @upstash/context7-mcp@4.0.0` | `claude mcp list` | No — restart |
-| Codex CLI | `codex mcp add quarkus-agent -- jbang io.quarkus:quarkus-agent-mcp:1.2.5:runner` · `codex mcp add context7 -- npx -y @upstash/context7-mcp@4.0.0` | `codex mcp list` | No — restart; sandbox may block network |
-| Gemini CLI | `gemini mcp add quarkus-agent jbang io.quarkus:quarkus-agent-mcp:1.2.5:runner` · `gemini mcp add context7 npx -y @upstash/context7-mcp@4.0.0` — **or** install this repo's Gemini extension, which already declares both servers | `gemini mcp list` | No — restart |
+| Claude Code | `claude mcp add -s user quarkus-agent -- jbang --java 21+ io.quarkus:quarkus-agent-mcp:1.2.5:runner` · `claude mcp add -s user context7 -- npx -y @upstash/context7-mcp@4.0.0` | `claude mcp list` | No — restart |
+| Codex CLI | `codex mcp add quarkus-agent -- jbang --java 21+ io.quarkus:quarkus-agent-mcp:1.2.5:runner` · `codex mcp add context7 -- npx -y @upstash/context7-mcp@4.0.0` | `codex mcp list` | No — restart; sandbox may block network |
+| Gemini CLI | `gemini mcp add quarkus-agent jbang --java 21+ io.quarkus:quarkus-agent-mcp:1.2.5:runner` · `gemini mcp add context7 npx -y @upstash/context7-mcp@4.0.0` — **or** install this repo's Gemini extension, which already declares both servers | `gemini mcp list` | No — restart |
 | Cursor | Write `.cursor/mcp.json` with both servers (`mcpServers` map, same command/args) | Settings → MCP shows both; user **toggles them on** | GUI enable |
-| GitHub Copilot CLI | `copilot mcp add quarkus-agent -- jbang io.quarkus:quarkus-agent-mcp:1.2.5:runner` · `copilot mcp add context7 -- npx -y @upstash/context7-mcp@4.0.0` | `copilot mcp list` | **Yes** — live immediately |
+| GitHub Copilot CLI | `copilot mcp add quarkus-agent -- jbang --java 21+ io.quarkus:quarkus-agent-mcp:1.2.5:runner` · `copilot mcp add context7 -- npx -y @upstash/context7-mcp@4.0.0` | `copilot mcp list` | **Yes** — live immediately |
 | opencode | Write `opencode.json` `mcp` key with both servers | `/mcp` in session | **Yes** — hot reload |
-| Bob (D3) | Write `.bob/mcp.json` (project) or `~/.bob/mcp.json` (global; the Bob Shell docs call it `mcp_settings.json` — prefer the UI's **Edit Global MCP**) with both servers | MCP tab in the Bob UI lists both | Reload in UI |
+| Bob (D3) | `bob mcp add -s global quarkus-agent jbang -- --java 21+ io.quarkus:quarkus-agent-mcp:1.2.5:runner` · `bob mcp add -s global context7 npx -- -y @upstash/context7-mcp@4.0.0` — the `--` is mandatory (see §5.1) | `bob mcp list` shows both, `stdio`, `global` | **Yes** — Bob restarts changed servers |
 
 The `.cursor/mcp.json`, `opencode.json`, and `.bob/mcp.json` map has the same shape everywhere:
 
 ```json
 {
   "mcpServers": {
-    "quarkus-agent": { "command": "jbang", "args": ["io.quarkus:quarkus-agent-mcp:1.2.5:runner"] },
+    "quarkus-agent": { "command": "jbang", "args": ["--java", "21+", "io.quarkus:quarkus-agent-mcp:1.2.5:runner"] },
     "context7":      { "command": "npx",   "args": ["-y", "@upstash/context7-mcp@4.0.0"] }
   }
 }
 ```
 
 (opencode uses the top-level `mcp` key rather than `mcpServers`; keep the two server entries the
-same. `jbang` must be on PATH — that is Phase A's job.)
+same. Bob is not in that list — its paths and its CLI are §5.1.)
 
-### 5.1 Restart handoff
+**Verify the stored command, not just the name.** Each `mcp list` above prints the command its
+servers will run; that string is the verification. "A server called `quarkus-agent` is listed" proves
+nothing — an entry left by an earlier release of this skill, by the upstream Quarkus Claude plugin,
+or by hand satisfies it while running an unpinned `jbang quarkus-agent-mcp@quarkusio`. Read the
+command back, compare it to `jbang --java 21+ io.quarkus:quarkus-agent-mcp:1.2.5:runner`, and treat a
+mismatch as a **repair**, not a skip — that is what makes the idempotent re-run worth anything.
+Repair means replacing the entry, never adding a second one under the same name: `bob mcp add-json`
+overwrites in place (§5.1), and elsewhere remove then re-add with the pinned command
+(`claude mcp remove -s user quarkus-agent`; for the other CLIs check `<cli> mcp --help` for the
+removal form rather than guessing it). Show the user the before and after strings.
+
+**`jbang` must be resolvable by the process that spawns the server — which is not the shell Phase A
+probed.** A GUI- or IDE-launched client is started by launchd (or systemd) with a minimal PATH: on
+macOS `launchctl getenv PATH` is typically empty, so the child gets `/usr/bin:/bin:/usr/sbin:/sbin`,
+and none of `sdk install jbang` (`~/.sdkman/…`), `brew install jbang` (`/opt/homebrew/bin`), or the
+upstream installer (`~/.jbang/bin`) puts `jbang` there. The symptom is `spawn jbang ENOENT` before
+`--java 21+` gets a chance to matter, and Phase A cannot see it — its probe runs in your login shell.
+When a client fails that way, register the **absolute path** from `command -v jbang` as the command,
+with the same arguments.
+
+### 5.1 Bob: which file, and the `--` separator
+
+Bob 2.0.0 ships `bob mcp add|add-json|list|remove`, so prefer the CLI over hand-writing JSON — it
+writes the file Bob actually reads and `bob mcp list` is a real verification. Four things to know:
+three the CLI enforces, one Bob's loader does.
+
+- **Probe for the legacy file BEFORE the first `add` — this ordering is load-bearing.** Bob migrates
+  `~/.bob/settings/mcp_settings.json` into `mcp.json` **only when `mcp.json` does not yet exist**.
+  `bob mcp add -s global` creates `mcp.json`, so registering first blocks that migration
+  permanently: on a machine whose global config still lives in the legacy file, our two servers land
+  in a fresh `mcp.json` and **every other server the user configured silently stops loading**. So:
+  if the legacy file exists and `mcp.json` does not, have the user start Bob once and let it migrate
+  (it announces *"your global MCP configuration has been migrated to mcp.json"*), confirm the
+  servers survived, and only then register. Never resolve this by copying files around yourself
+  without showing the user both files first.
+- **`--` before the server's own arguments is mandatory.** `bob mcp add … jbang --java 21+ <GAV>`
+  fails with `error: unknown option '--java'`, because Bob parses the flag as its own. With the
+  separator (`… jbang -- --java 21+ <GAV>`) the arguments land verbatim in the entry's `args`.
+- **`add` never updates an existing entry — `add-json` does.** On a name that is already registered,
+  `bob mcp add` exits 1 with `Error: MCP server "…" already exists in …` and leaves the old entry
+  untouched, so an idempotent re-run cannot repair a stale registration (an unpinned command, say)
+  through it. Use `bob mcp add-json -s <scope> quarkus-agent '{"command":"jbang","args":["--java",
+  "21+","io.quarkus:quarkus-agent-mcp:1.2.5:runner"]}'`, which overwrites in place — still the CLI,
+  so the file Bob reads stays the one being written. Show the user the current entry and confirm
+  before overwriting; `bob mcp remove` then `add` works too, but loses the entry if the add fails.
+- **`-s global` writes `~/.bob/settings/mcp.json`**, creating the file and directory if needed.
+  `-s workspace` (the default) writes `<project>/.bob/mcp.json` but does **not** create it — it exits
+  with `Fatal error: ENOENT … .bob/mcp.json`. Seed it **only when it is missing**, because `>`
+  truncates and an existing file holds the user's other servers:
+  `[ -f .bob/mcp.json ] || { mkdir -p .bob && printf '{"mcpServers":{}}\n' > .bob/mcp.json; }` — or
+  just use global scope, where Bob creates the file itself.
+- **Never write `mcp_settings.json` yourself** (Bob's loader, not the CLI). A registration written
+  there on a machine that already has `mcp.json` is silently ignored — it looks registered and Bob
+  never loads it. Check `~/.bob/mcp.json` and `~/.bob/mcp_settings.json` too: one directory **above**
+  the settings directory, where releases of this skill before v0.18.0 told agents to write. Bob reads
+  neither and migrates neither, so a machine set up by an earlier run may hold a registration there
+  that has never loaded. If you find one, report it and register through the CLI instead.
+
+A same-named server at workspace scope overrides global, and a deeper `.bob/mcp.json` overrides a
+shallower one in the same workspace. When something still fails to start, Bob's own log is the
+evidence: `~/.bob/logs/shell/` — a `UnsupportedClassVersionError` there is the JDK trap from §5.
+
+**No `bob` on PATH?** Probe with `command -v bob` before you plan the registration: a Bob-IDE-only
+machine has no CLI, and the whole route above is unavailable. Then hand-write the file — global
+`~/.bob/settings/mcp.json`, project `<project>/.bob/mcp.json` — read-modify-write so the user's other
+servers survive, with the entries from §5 including `--java 21+`. Verify in the UI's **MCP** tab,
+which lists what Bob actually loaded; that is the one verification that needs no binary. Every rule
+above still applies: not the legacy name, not a truncating write, and Bob reloads changed servers on
+its own.
+
+### 5.2 Restart handoff
 
 In **Claude Code, Codex CLI, and Gemini CLI** a newly registered MCP server only loads on the **next
 session**. After registering and verifying it appears in the `mcp list` output, end with this
@@ -164,8 +255,18 @@ explicit handoff:
 > `/setup-agentic-scaffolding`.** The re-run is idempotent — it will skip everything already done and
 > confirm the Quarkus Agents MCP and context7 are now live. That re-run **is** the verification pass.
 
-**Cursor** needs a one-time GUI toggle (Settings → MCP). **Copilot CLI** and **opencode** pick the
-servers up immediately (opencode hot-reloads), so no restart is required for those two.
+**Cursor** needs a one-time GUI toggle (Settings → MCP). **Copilot CLI**, **opencode**, and **Bob**
+pick the servers up immediately — opencode hot-reloads, and Bob watches its `mcp.json` and restarts
+the servers whose entry changed (`Restarting changed servers` in `~/.bob/logs/shell/`) — so no
+restart is required for those three.
+
+**Bob still needs a new conversation, for a different reason.** The restart above is the server
+process only; Bob loads skills and the conventions file **once per conversation**, so a run that also
+wrote `AGENTS.md` (Phase C) ends in a conversation that has not read it. Close with:
+
+> The MCP servers are live in this conversation. `AGENTS.md` and the skills load once per
+> conversation, so **start a new conversation** in Bob before running `/scaffold-project` — otherwise
+> the conventions are not in context and §1's tooling rule will stop the work.
 
 ## 6. Superpowers (detect and guide — never auto-install)
 
