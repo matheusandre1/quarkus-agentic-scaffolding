@@ -121,22 +121,25 @@ Derived from the conventions file §2–§5. Each check cites the section it enf
 
 ## 6. Report format
 
-Lead with the recommendation. Group findings by impact and give each one evidence, the convention
-it violates, and a concrete fix.
-
 - **High** — breaks a mandatory convention (pinned extension versions, manual `ChatModel` wiring,
   hand-rolled retry loops, Mutiny inside the engine, missing BOM import).
 - **Medium** — drift that will bite later (missing native profile, no observability extensions,
   Dev Services left on against a real endpoint, `ThreadLocal` for agent identity).
 - **Low** — polish (missing dev logging, DTOs that could be records, missing wiring smoke test).
 
-Each finding:
+Lead with the recommendation, then present **all findings in a single markdown table**, ordered
+by severity (high first). Each row carries concrete evidence (`file:line`), the convention the
+finding violates, and a concrete fix:
 
-```text
-[HIGH] pom.xml:42 — langchain4j-ollama pins <version>1.0.0</version>
-  Violates §3 (import the BOMs; do not pin extension versions).
-  Fix: remove the <version>; let quarkus-langchain4j-bom manage it.
-```
+| Severity | Evidence | Finding | Violates | Fix |
+|---|---|---|---|---|
+| HIGH | `pom.xml:42` | `langchain4j-ollama` pins `<version>1.0.0</version>` | §3 — import the BOMs; do not pin extension versions | Remove the `<version>`; let `quarkus-langchain4j-bom` manage it |
+| MEDIUM | `pom.xml` | No `native` Maven profile | §3 — build for both JVM and native | Add a `native` profile gating native integration tests |
+| LOW | `application.properties` | Request/response logging disabled | §4 — enable request/response logging | Set `quarkus.langchain4j.log-requests=true` and `quarkus.langchain4j.log-responses=true` |
+
+Keep cell text short — one clause per cell; the fix column says *what to change*, not a tutorial.
+When a finding needs more room than a row allows (a multi-step fix, a code excerpt), keep the row
+as the anchor and add a short note below the table referencing its evidence cell.
 
 Close with a **summary count** (`3 high, 2 medium, 4 low`) and the offer to apply fixes via
 `/scaffold-project` (components) or `/setup-agentic-scaffolding` Phase C (conventions file) **after
