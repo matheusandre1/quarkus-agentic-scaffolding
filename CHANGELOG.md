@@ -3,6 +3,18 @@
 All notable changes to this artifact are documented here. This project adheres to semantic
 versioning.
 
+## v0.19.0 — 2026-08-11
+- **`/audit-project` now reports findings as a single severity-ordered markdown table** (Severity /
+  Evidence / Finding / Violates / Fix) instead of per-finding text blocks. Severity grades (high,
+  medium, low) and the closing summary count are unchanged; the table is just easier to scan.
+- **Legacy projects no longer block the audit — they become HIGH findings.** A new §5.0 "Platform
+  lifecycle" check area turns the former hard stops into audit items: an EOL Quarkus platform line,
+  an unsupported Java release, a LangChain4j vintage outside the `quarkus-langchain4j-bom` lineage,
+  and a missing conventions file (`CLAUDE.md`/`AGENTS.md`/`GEMINI.md`). When the conventions file
+  is absent, the audit runs against the skill's own §5 catalog (which mirrors the canonical
+  conventions) and reports the absence as a finding. The only remaining project-side stop is "not a
+  Quarkus project at all"; the Quarkus Agents MCP gate is unchanged.
+
 ## v0.18.0 — 2026-08-10
 - **Every published Quarkus Agents MCP registration now pins the JDK: `jbang --java 21+
   io.quarkus:quarkus-agent-mcp:1.2.5:runner`.** The old command shipped no JDK hint, and §5 of the
