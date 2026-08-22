@@ -1,7 +1,7 @@
 <!-- BEGIN quarkus-agentic-scaffolding conventions (managed block; do not edit inside. Re-run /setup-agentic-scaffolding to update.) -->
 
 # Quarkus + LangChain4j + AI Stack — Project Conventions
-# Version: 0.19.1
+# Version: 0.20.0
 
 These conventions apply whenever code is written, reviewed, or configured in a Quarkus +
 LangChain4j project. They are always-on. Procedural scaffolding steps and starter code live in
@@ -42,7 +42,7 @@ generic web search.
   targets: GraalVM ships no releases for JDK 26, 27, or 28, so native-image stays on the JDK 25
   baseline (with quarterly updates) until JDK 29 lands (September 2027) — projects that build a
   native binary keep `maven.compiler.release` at 25 until then
-  ([GraalVM release-train announcement](https://medium.com/graalvm/accelerating-the-graalvm-release-train-26b0d7cff2ab)).
+  ([GraalVM release calendar](https://www.graalvm.org/release-calendar/)).
 - **Default to Virtual Threads for I/O-bound and blocking concurrent work.** Platform threads
   are acceptable only when the runtime or a critical dependency forbids virtual threads (for
   example, a JDBC driver that pins the carrier). When a blocking AI or tool call must run inside
@@ -100,7 +100,7 @@ generic web search.
   (`io.quarkiverse.langchain4j.cost`) to emit `gen_ai.client.estimated_cost`. Prompt and
   completion text reaches spans only when explicitly enabled
   (`quarkus.langchain4j.tracing.include-prompt` / `.include-completion`) — treat those as
-  dev-only, since they record user content.
+  dev-only and scope them with `%dev.`, since they record user content.
 - **Enable parameter-name retention.** Configure the compiler with `-parameters` (Maven:
   `<parameters>true</parameters>`), which REST and AI-service binding rely on.
 - **Build for both JVM and native.** Keep a `native` Maven profile so the project can produce a
@@ -143,6 +143,13 @@ generic web search.
   `@InputGuardrails` / `@OutputGuardrails` beans implementing the upstream
   `dev.langchain4j.guardrail` interfaces (the Quarkus-specific guardrail API was retired in favor
   of upstream); tune retries with `quarkus.langchain4j.guardrails.max-retries`.
+- **Externally originated free text is data, never instructions.** Free text the application did
+  not author itself — end-user input, inbound email or ticket bodies, webhook payloads, text
+  relayed from an upstream system — is interpolated into a prompt only inside explicit delimiters
+  (`<ticket>…</ticket>`), with the system message stating that the delimited span is data to
+  process and never instructions to follow, and every entry method that receives it carries
+  `@InputGuardrails`. Downstream services reading only model-produced state need no guardrail,
+  but still delimit values derived from that text.
 - **Fault tolerance is declarative on AI-service methods.** With
   `quarkus-smallrye-fault-tolerance`, put MicroProfile `@Timeout`, `@Retry`, and `@Fallback`
   (`org.eclipse.microprofile.faulttolerance`) directly on `@RegisterAiService` methods, with the
@@ -164,9 +171,9 @@ generic web search.
   `quarkus.langchain4j.easy-rag.path` at a documents folder and let it ingest on startup. Move to
   a hand-built `RetrievalAugmentor` (a CDI-produced `EmbeddingStore` + `EmbeddingStoreContentRetriever`)
   only when a project needs control Easy RAG does not provide.
-- **Enable request/response logging.** Set `quarkus.langchain4j.log-requests=true` and
-  `quarkus.langchain4j.log-responses=true` so prompts and model output are observable during
-  development.
+- **Enable request/response logging in dev.** Set `%dev.quarkus.langchain4j.log-requests=true` and
+  `%dev.quarkus.langchain4j.log-responses=true` so prompts and model output are observable during
+  development without recording user content in production.
 
 ---
 
