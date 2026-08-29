@@ -16,7 +16,8 @@ built rather than generic boilerplate.
 [![Skills](https://www.skills.sh/b/eldermoraes/quarkus-agentic-scaffolding)](https://www.skills.sh/eldermoraes/quarkus-agentic-scaffolding)
 
 The fastest install on any agent that supports the [Agent Skills](https://agentskills.io) format —
-Claude Code, Codex, GitHub Copilot, Cursor, Windsurf, opencode, Amp, IBM Bob, and dozens more:
+Claude Code, Codex, Gemini CLI, GitHub Copilot, Cursor, Windsurf, opencode, Amp, IBM Bob, and
+dozens more:
 
 ```
 npx skills add eldermoraes/quarkus-agentic-scaffolding
@@ -229,6 +230,55 @@ skills are only available in Bob's **Advanced** mode.
 `scaffold-project` produces the layout and starter files and `AGENTS.md` governs the conventions.
 Run `/audit-project` to review an existing project.
 
+## How to use with Gemini
+
+**Install the extension.** The Gemini CLI installs extensions from a git URL or a local path —
+those are the only source forms `gemini extensions install <source>` accepts (there is no
+`--source` flag and no `owner/repo` shorthand; verified against Gemini CLI 0.57.0, which also
+offers `--ref` to pin a git ref and `--auto-update`):
+
+```
+gemini extensions install https://github.com/eldermoraes/quarkus-agentic-scaffolding
+```
+
+Gemini is the one agent where the extension itself covers the MCP setup: the manifest
+([`gemini-extension.json`](gemini-extension.json)) declares both required servers — the
+**Quarkus Agents MCP** and **context7**, with the same version pins the manual commands below
+use — and its `contextFileName: AGENTS.md` delivers the conventions to every session the
+extension is active in, so nothing needs copying into your project root. In `gemini mcp list`,
+both servers carry a `(from quarkus-agentic-scaffolding)` label — that label is how you know the
+extension is supplying them. To undo all of this later, see [Uninstall](#uninstall), which walks
+through removing the extension and re-adding the two servers it takes with it.
+
+**Install the skills.** The extension does not carry the three skills — Gemini discovers skills
+from `.gemini/skills/`, which the extension does not populate. The
+[Quick install](#quick-install--any-skills-capable-agent) covers Gemini the same way it covers
+Bob: the skills CLI treats Gemini CLI as a first-class agent and installs all three skills into
+`.gemini/skills/` for you:
+
+```
+npx skills add eldermoraes/quarkus-agentic-scaffolding
+```
+
+Verify with `gemini skills list` (skills are enabled by default in Gemini CLI 0.57.0; the same
+command manages them with `enable` / `disable`).
+
+*Manual fallback,* if you would rather register the servers yourself instead of installing the
+extension: `gemini mcp add -s user quarkus-agent jbang --java 21+ io.quarkus:quarkus-agent-mcp:1.2.5:runner`;
+then `gemini mcp add -s user context7 npx -y @upstash/context7-mcp@4.0.3` (for higher rate limits
+`export CONTEXT7_API_KEY=…` in your shell — the server picks it up from the environment, so no key
+belongs on the command line); and copy [`AGENTS.md`](AGENTS.md) into your project root. Two scope
+caveats, the same pair the [Uninstall](#uninstall) section leans on: `gemini mcp add` defaults to
+`--scope project`, hence `-s user` for a machine-wide registration; and a `settings.json`
+registration takes precedence over an extension-declared server of the same name — so installing
+the extension *on top of* manual entries leaves your entries silently shadowing the extension's
+pinned versions. Pick one route, not both.
+
+**Try it.** Extensions and MCP servers load at session start, so restart Gemini after installing.
+Then use a trigger phrase such as *"scaffold a new Quarkus + LangChain4j project"* or *"create a
+new AI service"*; `scaffold-project` produces the layout and starter files and `AGENTS.md`
+governs the conventions. Run `/audit-project` to review an existing project.
+
 ## What's in `CLAUDE.md` / `AGENTS.md` and why
 
 `CLAUDE.md` (Claude) and `AGENTS.md` (Codex and Bob) are intentionally short and always-on. They
@@ -428,8 +478,9 @@ skill is unlinked, not recursed into. Your MCP registration (`.bob/mcp.json` in 
 left alone. Re-running it is a clean no-op. Skills load once per conversation, so
 **start a new conversation** in Bob afterwards.
 
-**Gemini CLI** — if you installed the extension, uninstalling it takes the two MCP servers it
-declares with it, so add them back at user scope:
+**Gemini CLI** — uninstalling the extension (installed in
+[How to use with Gemini](#how-to-use-with-gemini)) takes the two MCP servers it declares with it,
+so add them back at user scope:
 
 ```
 gemini extensions uninstall quarkus-agentic-scaffolding
